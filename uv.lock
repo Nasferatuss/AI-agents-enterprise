@@ -1105,6 +1105,7 @@ source = { editable = "platform/shared" }
 dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "structlog" },
 ]
 
@@ -1112,5 +1113,6 @@ dependencies = [
 requires-dist = [
     { name = "pydantic", specifier = ">=2.10" },
     { name = "pydantic-settings", specifier = ">=2.7" },
+    { name = "python-dotenv", specifier = ">=1.0" },
     { name = "structlog", specifier = ">=24.4" },
 ]

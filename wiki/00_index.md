@@ -70,6 +70,7 @@ Qdrant store, hybrid search (RRF dense+BM25), API `/v1/rag/*` → [[rag]].
 - [[adr-006-custom-trace-schema]]
 - [[adr-007-predictable-orchestration]]
 - [[adr-008-model-router-design]]
+- [[adr-009-deployment-topology]]
 
 ## Планирование
 - [[phases-and-sprints]] — Discovery → Design → Dev (Sprint 0–10) → QA → Launch → Post-Launch

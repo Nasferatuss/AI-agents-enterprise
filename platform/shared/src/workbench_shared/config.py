@@ -7,6 +7,7 @@ env-driven source of truth (prefix ``WB_``), never ad-hoc ``os.environ`` reads.
 from functools import lru_cache
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -44,4 +45,8 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    # Provider API keys (ANTHROPIC_API_KEY, …) are read from os.environ, not from
+    # Settings fields — pull .env into the environment first. Never overrides
+    # variables already set in the shell.
+    load_dotenv()
     return Settings()

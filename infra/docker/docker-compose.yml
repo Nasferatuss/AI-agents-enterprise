@@ -39,6 +39,9 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile.api
+    env_file:
+      - path: ../../.env
+        required: false
     environment:
       WB_ENV: dev
       WB_POSTGRES_DSN: postgresql://workbench:workbench@postgres:5432/workbench
