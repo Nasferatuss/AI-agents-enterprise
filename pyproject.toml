@@ -8,6 +8,7 @@ dependencies = [
     "workbench-gateway",
     "workbench-runtime",
     "workbench-rag",
+    "workbench-evals",
 ]
 
 [dependency-groups]
@@ -19,22 +20,23 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-gateway = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-rag = { workspace = true }
+workbench-evals = { workspace = true }
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src"]
+src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src", "platform/evals/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "tests"]
+testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "tests"]

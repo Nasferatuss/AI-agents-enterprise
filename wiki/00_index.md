@@ -34,10 +34,12 @@ AgentRun-трейс каждого шага (семя [[adr-006-custom-trace-sch
 (instructions/memory/retrieved/task_state, caching-friendly порядок), compaction старых
 ходов через simple-tier (бесплатная суммаризация), контекст и события компакции
 сохраняются в `AgentRun.context` → [[context-engineering]].
-**Sprint 2 — RAG Core: done (2026-06-10).** `platform/rag`: loaders (md/txt/pdf),
-heading-aware chunking, embeddings локально (Ollama/nomic-embed-text, hash-fallback),
-Qdrant store, hybrid search (RRF dense+BM25), API `/v1/rag/*` → [[rag]].
-Следующий шаг: **Sprint 2.1 — RAG Eval v0** → модуль [[rag-evaluation-lab]].
+**Sprint 2 + 2.1 — RAG Core + RAG Eval v0: done (2026-06-10).** `platform/rag`
+(loaders, chunking, локальные embeddings, Qdrant, hybrid RRF) + `platform/evals`
+(retrieval-метрики, citation accuracy, LLM-judges на judge-tier, synthetic QA,
+отчёты в data/eval_results) → [[rag]] · [[rag-evaluation-lab]]. ADR-009: сервис на Mac,
+GPU-машина = inference (инструкция: `docs/setup.md`).
+Следующий шаг: **Sprint 3 — Text-to-SQL Agent** ([[text-to-sql-rag-agent]]).
 Детали → [[phases-and-sprints]].
 
 ## Архитектура
@@ -49,7 +51,7 @@ Qdrant store, hybrid search (RRF dense+BM25), API `/v1/rag/*` → [[rag]].
 |---|--------|--------|-----|
 | 1 | [[enterprise-workflow-orchestrator]] | draft | ✅ ядро |
 | 2 | [[text-to-sql-rag-agent]] | draft | ✅ |
-| 3 | [[rag-evaluation-lab]] | draft | ✅ |
+| 3 | [[rag-evaluation-lab]] | active | ✅ |
 | 4 | [[agent-observability-console]] | draft | ✅ сквозной |
 | 5 | [[business-process-investigator]] | draft | |
 | 6 | [[compliance-risk-reviewer]] | draft | |

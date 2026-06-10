@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     embeddings_backend: Literal["ollama", "hash"] = "ollama"
     embedding_model: str = "nomic-embed-text"
 
+    # Evaluation Engine (Sprint 2.1)
+    eval_results_dir: str = "data/eval_results"
+
 
 @lru_cache
 def get_settings() -> Settings:
