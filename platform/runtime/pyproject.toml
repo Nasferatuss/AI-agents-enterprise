@@ -1,22 +1,20 @@
 [project]
-name = "workbench-gateway"
+name = "workbench-runtime"
 version = "0.1.0"
-description = "API Gateway — single entry point for the UI and external clients"
+description = "Agent Runtime — model routing (ADR-008), agent execution, tool calling"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.34",
+    "anthropic>=0.92",
+    "httpx>=0.28",
     "workbench-shared",
-    "workbench-runtime",
 ]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
-workbench-runtime = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/workbench_gateway"]
+packages = ["src/workbench_runtime"]

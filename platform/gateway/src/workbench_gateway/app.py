@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from workbench_gateway import __version__
-from workbench_gateway.routes import health
+from workbench_gateway.routes import health, llm
 from workbench_shared.logging import configure_logging, get_logger
 
 log = get_logger(__name__)
@@ -16,6 +16,7 @@ def create_app() -> FastAPI:
         version=__version__,
     )
     app.include_router(health.router)
+    app.include_router(llm.router)
     log.info("gateway configured", version=__version__)
     return app
 

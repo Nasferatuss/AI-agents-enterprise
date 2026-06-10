@@ -21,8 +21,20 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
 
-    # Model routing (ADR-003 hybrid local/API split) — consumed by Sprint 1 model-router
-    local_llm_base_url: str = "http://localhost:11434"
+    # Model routing (ADR-003 hybrid local/API split + ADR-008 router).
+    # API keys use standard env names (ANTHROPIC_API_KEY, OPENAI_API_KEY,
+    # DEEPSEEK_API_KEY, MOONSHOT_API_KEY, MIMO_API_KEY) — see workbench_runtime.providers.
+    local_llm_base_url: str = "http://localhost:11434"  # Ollama on the GPU box (LAN IP in .env)
+    local_llm_model: str = "qwen2.5:3b-instruct"
+    deepseek_model: str = "deepseek-chat"
+    kimi_model: str = "kimi-k2-0905-preview"
+    anthropic_model: str = "claude-opus-4-8"
+    anthropic_small_model: str = "claude-haiku-4-5"
+    openai_model: str = "gpt-5.1"
+    mimo_base_url: str = ""  # set to the OpenAI-compatible endpoint to enable the mimo provider
+    mimo_model: str = ""
+    # Prepend local to the standard-tier chain (turn on after pulling a 14B+ model on the 4090)
+    route_standard_via_local: bool = False
 
 
 @lru_cache

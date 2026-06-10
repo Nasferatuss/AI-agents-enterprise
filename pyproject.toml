@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "workbench-shared",
     "workbench-gateway",
+    "workbench-runtime",
 ]
 
 [dependency-groups]
@@ -17,20 +18,21 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway"]
+members = ["platform/shared", "platform/gateway", "platform/runtime"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-gateway = { workspace = true }
+workbench-runtime = { workspace = true }
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["platform/shared/src", "platform/gateway/src"]
+src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["platform/gateway/tests", "tests"]
+testpaths = ["platform/gateway/tests", "platform/runtime/tests", "tests"]

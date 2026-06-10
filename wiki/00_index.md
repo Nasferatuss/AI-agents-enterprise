@@ -21,10 +21,13 @@ observability, governance, incident response, orchestration.
 ## Статус разработки
 **Sprint 0 — Repo & Platform Skeleton: done (2026-06-10).** Monorepo живёт в
 [github.com/Nasferatuss/AI-agents-enterprise](https://github.com/Nasferatuss/AI-agents-enterprise):
-uv workspace (`platform/shared` + `platform/gateway`), FastAPI gateway с `/healthz` и
-`/healthz/deps` (TCP-probes Postgres/Redis/Qdrant), Docker Compose (pgvector, Qdrant, Redis, api),
-Next.js demo console (`ui/web`), Makefile, тесты/lint зелёные. Детали → [[phases-and-sprints]].
-Следующий шаг: **Sprint 1 — Core Agent Runtime + Model Router** ([[adr-003-local-api-model-split]]).
+uv workspace (`platform/shared` + `platform/gateway` + `platform/runtime`), FastAPI gateway,
+Docker Compose (pgvector, Qdrant, Redis, api), Next.js demo console (`ui/web`).
+
+**Sprint 1 — Model Router: done (2026-06-10).** `platform/runtime`: свой local-first router
+([[adr-008-model-router-design]]) — цепочки local (Ollama/4090) → cheap (DeepSeek/Kimi) →
+frontier (Claude/GPT) по complexity, fallback, cost-телеметрия; gateway `/v1/models` + `/v1/chat`.
+Осталось из Sprint 1: agent loop + tool calling. Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -55,6 +58,7 @@ Next.js demo console (`ui/web`), Makefile, тесты/lint зелёные. Де�
 - [[adr-005-mcp-security-boundary]]
 - [[adr-006-custom-trace-schema]]
 - [[adr-007-predictable-orchestration]]
+- [[adr-008-model-router-design]]
 
 ## Планирование
 - [[phases-and-sprints]] — Discovery → Design → Dev (Sprint 0–10) → QA → Launch → Post-Launch
