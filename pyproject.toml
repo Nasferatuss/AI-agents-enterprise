@@ -1,0 +1,36 @@
+[project]
+name = "workbench"
+version = "0.1.0"
+description = "Enterprise AI Agent Workbench — service-oriented platform for production-grade AI agents"
+requires-python = ">=3.12"
+dependencies = [
+    "workbench-shared",
+    "workbench-gateway",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "httpx>=0.28",
+    "ruff>=0.9",
+]
+
+[tool.uv.workspace]
+members = ["platform/shared", "platform/gateway"]
+
+[tool.uv.sources]
+workbench-shared = { workspace = true }
+workbench-gateway = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["platform/shared/src", "platform/gateway/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["platform/gateway/tests", "tests"]

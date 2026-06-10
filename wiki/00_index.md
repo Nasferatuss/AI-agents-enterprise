@@ -1,7 +1,7 @@
 ---
 type: index
 sources: ["Дорожная карта.pdf"]
-updated: 2026-06-07
+updated: 2026-06-10
 ---
 
 # Enterprise AI Agent Workbench — Index
@@ -17,6 +17,14 @@ observability, governance, incident response, orchestration.
 есть архитектурная схема, рабочее demo, trace, eval-метрики, README, limitations, recorded demo.
 - MVP: ядро + **3** модуля высокой глубины.
 - Portfolio: **10** модулей на едином [[service-oriented-core]].
+
+## Статус разработки
+**Sprint 0 — Repo & Platform Skeleton: done (2026-06-10).** Monorepo живёт в
+[github.com/Nasferatuss/AI-agents-enterprise](https://github.com/Nasferatuss/AI-agents-enterprise):
+uv workspace (`platform/shared` + `platform/gateway`), FastAPI gateway с `/healthz` и
+`/healthz/deps` (TCP-probes Postgres/Redis/Qdrant), Docker Compose (pgvector, Qdrant, Redis, api),
+Next.js demo console (`ui/web`), Makefile, тесты/lint зелёные. Детали → [[phases-and-sprints]].
+Следующий шаг: **Sprint 1 — Core Agent Runtime + Model Router** ([[adr-003-local-api-model-split]]).
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн

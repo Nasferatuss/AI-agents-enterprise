@@ -6,3 +6,21 @@ tools/everything-claude-code/
 
 # Local Claude Code settings
 .claude/settings.local.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node / Next.js
+node_modules/
+ui/web/.next/
+ui/web/next-env.d.ts
+*.tsbuildinfo
+
+# Env & data artifacts
+.env
+data/*
+!data/.gitkeep
