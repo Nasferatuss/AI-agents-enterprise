@@ -1,0 +1,8 @@
+# claude-memory-compiler tool (its own git repo + runtime artifacts)
+claude-memory-compiler/
+
+# vendored everything-claude-code plugin (available as opt-in local marketplace)
+tools/everything-claude-code/
+
+# Local Claude Code settings
+.claude/settings.local.json

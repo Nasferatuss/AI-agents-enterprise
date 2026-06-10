@@ -1,0 +1,20 @@
+{
+  "name": "ecc-hooks-local",
+  "owner": {
+    "name": "nasferatus"
+  },
+  "metadata": {
+    "description": "Local marketplace exposing the hooks-only slice of vendored everything-claude-code"
+  },
+  "plugins": [
+    {
+      "name": "ecc-hooks",
+      "source": "./",
+      "description": "Curated ECC production hooks without ECC skills/agents/commands (those are selectively copied into .claude/). Lifecycle hooks that would duplicate claude-memory-compiler are excluded.",
+      "version": "1.10.0",
+      "license": "MIT",
+      "category": "workflow",
+      "strict": false
+    }
+  ]
+}

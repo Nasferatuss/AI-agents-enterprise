@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Curated slice of ../everything-claude-code/hooks/hooks.json. Excluded: session:start, pre:compact, stop:session-end, session:end:marker, stop:evaluate-session, pre/post:observe:continuous-learning (duplicate claude-memory-compiler); stop:format-typecheck, stop:check-console-log, post:edit:accumulator, post:edit:console-warn, post:edit:design-quality-check (JS/TS-frontend specific, project is a markdown/python wiki); pre:write:doc-file-warning (would warn on every wiki/*.md write); tmux/build/governance extras. Cherry-pick more from the vendored hooks.json as needed. Runtime tuning: ECC_HOOK_PROFILE=minimal|standard|strict, ECC_DISABLED_HOOKS=id1,id2.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx block-no-verify@1.1.2"
+          }
+        ],
+        "description": "Block git hook-bypass flag to protect pre-commit, commit-msg, and pre-push hooks from being skipped",
+        "id": "pre:bash:block-no-verify"
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:edit-write:suggest-compact\" \"scripts/hooks/suggest-compact.js\" \"standard,strict\""
+          }
+        ],
+        "description": "Suggest manual compaction at logical intervals",
+        "id": "pre:edit-write:suggest-compact"
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:config-protection\" \"scripts/hooks/config-protection.js\" \"standard,strict\"",
+            "timeout": 5
+          }
+        ],
+        "description": "Block modifications to linter/formatter config files. Steers agent to fix code instead of weakening configs.",
+        "id": "pre:config-protection"
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"pre:mcp-health-check\" \"scripts/hooks/mcp-health-check.js\" \"standard,strict\""
+          }
+        ],
+        "description": "Check MCP server health before MCP tool execution and block unhealthy MCP calls",
+        "id": "pre:mcp-health-check"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/post-bash-command-log.js\" audit"
+          }
+        ],
+        "description": "Audit log all bash commands to ~/.claude/bash-commands.log",
+        "id": "post:bash:command-log-audit"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"post:bash:pr-created\" \"scripts/hooks/post-bash-pr-created.js\" \"standard,strict\""
+          }
+        ],
+        "description": "Log PR URL and provide review command after PR creation",
+        "id": "post:bash:pr-created"
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"post:quality-gate\" \"scripts/hooks/quality-gate.js\" \"standard,strict\"",
+            "async": true,
+            "timeout": 30
+          }
+        ],
+        "description": "Run quality gate checks after file edits",
+        "id": "post:quality-gate"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"post:mcp-health-check\" \"scripts/hooks/mcp-health-check.js\" \"standard,strict\""
+          }
+        ],
+        "description": "Track failed MCP tool calls, mark unhealthy servers, and attempt reconnect",
+        "id": "post:mcp-health-check"
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"stop:cost-tracker\" \"scripts/hooks/cost-tracker.js\" \"minimal,standard,strict\"",
+            "async": true,
+            "timeout": 10
+          }
+        ],
+        "description": "Track token and cost metrics per session",
+        "id": "stop:cost-tracker"
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/run-with-flags.js\" \"stop:desktop-notify\" \"scripts/hooks/desktop-notify.js\" \"standard,strict\"",
+            "async": true,
+            "timeout": 10
+          }
+        ],
+        "description": "Send desktop notification (macOS) with task summary when Claude responds",
+        "id": "stop:desktop-notify"
+      }
+    ]
+  }
+}

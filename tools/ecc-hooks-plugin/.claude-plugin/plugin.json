@@ -1,0 +1,10 @@
+{
+  "name": "ecc-hooks",
+  "version": "1.10.0",
+  "description": "Hooks-only slice of everything-claude-code: curated production hooks. Skills/agents/commands are NOT loaded from here — the selected subset lives in .claude/. Hook scripts resolve via the scripts/ symlink into ../everything-claude-code.",
+  "author": {
+    "name": "Affaan Mustafa (ECC), curated by nasferatus",
+    "url": "https://github.com/affaan-m/everything-claude-code"
+  },
+  "license": "MIT"
+}
