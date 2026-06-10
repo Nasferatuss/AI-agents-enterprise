@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Prepend local to the standard-tier chain (turn on after pulling a 14B+ model on the 4090)
     route_standard_via_local: bool = False
 
+    # RAG Core (Sprint 2): embeddings run locally per ADR-003 (Ollama on the GPU box).
+    # "hash" is a deterministic non-semantic fallback for keyless/GPU-less dev.
+    embeddings_backend: Literal["ollama", "hash"] = "ollama"
+    embedding_model: str = "nomic-embed-text"
+
 
 @lru_cache
 def get_settings() -> Settings:

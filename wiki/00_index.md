@@ -34,7 +34,10 @@ AgentRun-трейс каждого шага (семя [[adr-006-custom-trace-sch
 (instructions/memory/retrieved/task_state, caching-friendly порядок), compaction старых
 ходов через simple-tier (бесплатная суммаризация), контекст и события компакции
 сохраняются в `AgentRun.context` → [[context-engineering]].
-Следующий шаг: **Sprint 2 — RAG Core** ([[rag]], [[rag-evaluation-lab]]).
+**Sprint 2 — RAG Core: done (2026-06-10).** `platform/rag`: loaders (md/txt/pdf),
+heading-aware chunking, embeddings локально (Ollama/nomic-embed-text, hash-fallback),
+Qdrant store, hybrid search (RRF dense+BM25), API `/v1/rag/*` → [[rag]].
+Следующий шаг: **Sprint 2.1 — RAG Eval v0** → модуль [[rag-evaluation-lab]].
 Детали → [[phases-and-sprints]].
 
 ## Архитектура

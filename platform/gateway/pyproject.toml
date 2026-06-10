@@ -8,11 +8,13 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "workbench-shared",
     "workbench-runtime",
+    "workbench-rag",
 ]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
+workbench-rag = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

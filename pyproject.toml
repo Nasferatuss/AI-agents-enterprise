@@ -7,6 +7,7 @@ dependencies = [
     "workbench-shared",
     "workbench-gateway",
     "workbench-runtime",
+    "workbench-rag",
 ]
 
 [dependency-groups]
@@ -18,21 +19,22 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-gateway = { workspace = true }
 workbench-runtime = { workspace = true }
+workbench-rag = { workspace = true }
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src"]
+src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["platform/gateway/tests", "platform/runtime/tests", "tests"]
+testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "tests"]
