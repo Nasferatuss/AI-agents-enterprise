@@ -24,10 +24,14 @@ observability, governance, incident response, orchestration.
 uv workspace (`platform/shared` + `platform/gateway` + `platform/runtime`), FastAPI gateway,
 Docker Compose (pgvector, Qdrant, Redis, api), Next.js demo console (`ui/web`).
 
-**Sprint 1 — Model Router: done (2026-06-10).** `platform/runtime`: свой local-first router
-([[adr-008-model-router-design]]) — цепочки local (Ollama/4090) → cheap (DeepSeek/Kimi) →
-frontier (Claude/GPT) по complexity, fallback, cost-телеметрия; gateway `/v1/models` + `/v1/chat`.
-Осталось из Sprint 1: agent loop + tool calling. Детали → [[phases-and-sprints]].
+**Sprint 1 — Agent Runtime + Model Router: done (2026-06-10).** `platform/runtime`
+([[adr-008-model-router-design]]): local-first router (local Ollama/4090 → cheap DeepSeek/Kimi →
+frontier Claude/GPT, fallback, cost-телеметрия) + agent loop с tool calling — provider-agnostic
+transcript (Anthropic tool use ↔ OpenAI function calling), pydantic-валидация аргументов tools,
+AgentRun-трейс каждого шага (семя [[adr-006-custom-trace-schema]]). Gateway: `/v1/models`,
+`/v1/chat`, `/v1/agents`, `/v1/agents/{name}/run` (+ demo-агент с calculator/utc_now).
+Следующий шаг: **Sprint 1.1 — Context Engine v0** либо **Sprint 2 — RAG Core**.
+Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн

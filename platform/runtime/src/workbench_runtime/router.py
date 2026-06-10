@@ -4,6 +4,10 @@ Local-first cost policy (user preference + ADR-003): everything that a small
 local model can handle goes to the 4090 box; the chain degrades gracefully to
 cheap API and only reaches frontier models when the task demands it. A candidate
 that is unreachable or errors is skipped; the first success wins.
+
+step() is the primitive (one model turn, optionally with tools) used by both
+the plain /v1/chat path and the agent loop. The transcript is provider-agnostic,
+so fallback can switch providers even mid-agent-run.
 """
 
 import time
@@ -14,12 +18,21 @@ import httpx
 
 from workbench_runtime.clients import (
     ProviderCallError,
-    complete_anthropic,
-    complete_openai_compatible,
+    step_anthropic,
+    step_openai_compatible,
 )
 from workbench_runtime.pricing import estimate_cost_usd
 from workbench_runtime.providers import Provider, build_registry
-from workbench_runtime.types import ChatMessage, Completion, Complexity
+from workbench_runtime.tools import Tool
+from workbench_runtime.types import (
+    AssistantMessage,
+    ChatMessage,
+    Completion,
+    Complexity,
+    StepOutput,
+    Transcript,
+    UserMessage,
+)
 from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger
 
@@ -64,13 +77,16 @@ class ModelRouter:
 
         return [(p, role) for p, role in chain if p in self.registry and self.registry[p].enabled]
 
-    async def complete(
+    async def step(
         self,
-        messages: list[ChatMessage],
+        transcript: Transcript,
         complexity: Complexity = "standard",
+        tools: list[Tool] | None = None,
         system: str | None = None,
         max_tokens: int = 1024,
-    ) -> Completion:
+    ) -> StepOutput:
+        """One model turn with fallback across the complexity chain."""
+        tools = tools or []
         attempts: list[str] = []
         for provider_name, role in self.chain(complexity):
             provider = self.registry[provider_name]
@@ -78,49 +94,74 @@ class ModelRouter:
             started = time.monotonic()
             try:
                 if provider.kind == "anthropic":
-                    text, usage = await complete_anthropic(
+                    out = await step_anthropic(
                         self._get_anthropic(),
                         provider,
                         model,
-                        messages,
+                        transcript,
+                        tools,
                         system,
                         max_tokens,
                         use_thinking=complexity in ("complex", "judge"),
                     )
                 else:
-                    text, usage = await complete_openai_compatible(
-                        self._http, provider, model, messages, system, max_tokens
+                    out = await step_openai_compatible(
+                        self._http, provider, model, transcript, tools, system, max_tokens
                     )
             except ProviderCallError as exc:
                 attempts.append(f"{provider_name}/{model}")
                 log.warning("provider failed, falling back", error=str(exc))
                 continue
 
-            latency_ms = int((time.monotonic() - started) * 1000)
-            completion = Completion(
-                text=text,
-                provider=provider_name,
-                model=model,
-                usage=usage,
-                cost_usd=estimate_cost_usd(model, usage.input_tokens, usage.output_tokens),
-                latency_ms=latency_ms,
-                complexity=complexity,
-                attempts=attempts,
-            )
+            out.provider = provider_name
+            out.model = model
+            out.latency_ms = int((time.monotonic() - started) * 1000)
+            out.cost_usd = estimate_cost_usd(model, out.usage.input_tokens, out.usage.output_tokens)
+            out.attempts = attempts
             log.info(
-                "completion",
+                "model step",
                 provider=provider_name,
                 model=model,
                 complexity=complexity,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                cost_usd=completion.cost_usd,
-                latency_ms=latency_ms,
+                tools=len(tools),
+                tool_calls=len(out.tool_calls),
+                input_tokens=out.usage.input_tokens,
+                output_tokens=out.usage.output_tokens,
+                cost_usd=out.cost_usd,
+                latency_ms=out.latency_ms,
                 fallbacks=len(attempts),
             )
-            return completion
+            return out
 
         raise NoProviderAvailableError(complexity, attempts)
+
+    async def complete(
+        self,
+        messages: list[ChatMessage],
+        complexity: Complexity = "standard",
+        system: str | None = None,
+        max_tokens: int = 1024,
+    ) -> Completion:
+        """Plain chat completion (no tools) — thin wrapper over step()."""
+        transcript: Transcript = [
+            UserMessage(content=m.content)
+            if m.role == "user"
+            else AssistantMessage(content=m.content)
+            for m in messages
+        ]
+        out = await self.step(
+            transcript, complexity=complexity, system=system, max_tokens=max_tokens
+        )
+        return Completion(
+            text=out.text,
+            provider=out.provider,
+            model=out.model,
+            usage=out.usage,
+            cost_usd=out.cost_usd,
+            latency_ms=out.latency_ms,
+            complexity=complexity,
+            attempts=out.attempts,
+        )
 
     def _get_anthropic(self) -> anthropic.AsyncAnthropic:
         if self._anthropic is None:
