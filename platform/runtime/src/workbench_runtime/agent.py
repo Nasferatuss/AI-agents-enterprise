@@ -1,13 +1,16 @@
-"""Agent contract and the manual agentic loop (Sprint 1).
+"""Agent contract and the manual agentic loop (Sprint 1 + Context Engine 1.1).
 
-The loop: model turn → execute requested tools → feed results back → repeat,
-until the model answers without tool calls or max_steps is hit. Every step is
-recorded into AgentRun — the seed of the trace schema (ADR-006): tool args,
-results, per-step usage/cost are never thrown away.
+The loop: build context → model turn → execute requested tools → feed results
+back → repeat, until the model answers without tool calls or max_steps is hit.
+Between steps the Context Engine compacts the transcript when it outgrows the
+budget. Every step is recorded into AgentRun — the seed of the trace schema
+(ADR-006): tool args, results, per-step usage/cost and the context actually
+used are never thrown away.
 """
 
 from dataclasses import dataclass, field
 
+from workbench_runtime.context import ContextEngine, ContextPolicy
 from workbench_runtime.router import ModelRouter, get_router
 from workbench_runtime.tools import Tool, execute_tool
 from workbench_runtime.types import (
@@ -15,6 +18,7 @@ from workbench_runtime.types import (
     AgentStep,
     AssistantMessage,
     Complexity,
+    RunContext,
     ToolExecution,
     ToolResultMessage,
     Transcript,
@@ -34,24 +38,49 @@ class Agent:
     complexity: Complexity = "standard"
     max_steps: int = 8
     max_tokens: int = 2048
+    context_policy: ContextPolicy = field(default_factory=ContextPolicy)
 
     def tool(self, name: str) -> Tool | None:
         return next((t for t in self.tools if t.name == name), None)
 
 
-async def run_agent(agent: Agent, user_input: str, router: ModelRouter | None = None) -> AgentRun:
+async def run_agent(
+    agent: Agent,
+    user_input: str,
+    router: ModelRouter | None = None,
+    memory: list[str] | None = None,
+    retrieved: list[str] | None = None,
+    task_state: str | None = None,
+) -> AgentRun:
     router = router or get_router()
+    engine = ContextEngine(router, agent.context_policy)
+    bundle = engine.build(
+        agent.instructions, memory=memory, retrieved=retrieved, task_state=task_state
+    )
+    system = bundle.render_system()
+    run_context = RunContext(parts=bundle.parts)
+
     transcript: Transcript = [UserMessage(content=user_input)]
     steps: list[AgentStep] = []
     usage = Usage()
     cost: float | None = 0.0
 
-    for _ in range(agent.max_steps):
+    for step_index in range(agent.max_steps):
+        transcript, compaction = await engine.maybe_compact(transcript, step_index)
+        if compaction:
+            run_context.compactions.append(compaction)
+            usage = usage + compaction.usage
+            cost = (
+                None
+                if (cost is None or compaction.cost_usd is None)
+                else cost + compaction.cost_usd
+            )
+
         out = await router.step(
             transcript,
             complexity=agent.complexity,
             tools=agent.tools,
-            system=agent.instructions,
+            system=system,
             max_tokens=agent.max_tokens,
         )
         usage = usage + out.usage
@@ -68,6 +97,7 @@ async def run_agent(agent: Agent, user_input: str, router: ModelRouter | None = 
                 steps=steps,
                 usage=usage,
                 cost_usd=cost,
+                context=run_context,
             )
 
         executions: list[ToolExecution] = []
@@ -101,4 +131,5 @@ async def run_agent(agent: Agent, user_input: str, router: ModelRouter | None = 
         steps=steps,
         usage=usage,
         cost_usd=cost,
+        context=run_context,
     )

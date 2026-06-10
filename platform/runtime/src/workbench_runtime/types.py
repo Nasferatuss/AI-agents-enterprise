@@ -103,6 +103,30 @@ class AgentStep(BaseModel):
     tool_executions: list[ToolExecution] = []
 
 
+# --- Context Engine (Sprint 1.1) ---
+
+
+class ContextPart(BaseModel):
+    name: str  # instructions | memory | retrieved_context | task_state
+    content: str
+
+
+class CompactionEvent(BaseModel):
+    step: int
+    tokens_before: int
+    tokens_after: int
+    summarized_items: int
+    usage: Usage = Usage()  # what the summarizer call itself consumed
+    cost_usd: float | None = None
+
+
+class RunContext(BaseModel):
+    """What context the run actually used — recorded on every AgentRun (DoD 1.1)."""
+
+    parts: list[ContextPart] = []
+    compactions: list[CompactionEvent] = []
+
+
 class AgentRun(BaseModel):
     agent: str
     status: Literal["completed", "max_steps_reached"]
@@ -110,3 +134,4 @@ class AgentRun(BaseModel):
     steps: list[AgentStep]
     usage: Usage
     cost_usd: float | None
+    context: RunContext = RunContext()

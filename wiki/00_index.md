@@ -30,7 +30,11 @@ frontier Claude/GPT, fallback, cost-телеметрия) + agent loop с tool c
 transcript (Anthropic tool use ↔ OpenAI function calling), pydantic-валидация аргументов tools,
 AgentRun-трейс каждого шага (семя [[adr-006-custom-trace-schema]]). Gateway: `/v1/models`,
 `/v1/chat`, `/v1/agents`, `/v1/agents/{name}/run` (+ demo-агент с calculator/utc_now).
-Следующий шаг: **Sprint 1.1 — Context Engine v0** либо **Sprint 2 — RAG Core**.
+**Sprint 1.1 — Context Engine v0: done (2026-06-10).** Builder system prompt из частей
+(instructions/memory/retrieved/task_state, caching-friendly порядок), compaction старых
+ходов через simple-tier (бесплатная суммаризация), контекст и события компакции
+сохраняются в `AgentRun.context` → [[context-engineering]].
+Следующий шаг: **Sprint 2 — RAG Core** ([[rag]], [[rag-evaluation-lab]]).
 Детали → [[phases-and-sprints]].
 
 ## Архитектура
