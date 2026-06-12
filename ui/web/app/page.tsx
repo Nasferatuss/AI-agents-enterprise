@@ -80,6 +80,29 @@ export default async function Home() {
           </p>
         )}
       </section>
+
+      <section className="mt-6">
+        <h2 className="text-sm font-medium text-zinc-300">Modules</h2>
+        <div className="mt-3 grid gap-3">
+          <a
+            href="/text2sql"
+            className="group rounded-lg border border-zinc-800 p-5 transition-colors hover:border-zinc-600"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-zinc-100">
+                Text-to-SQL BI Agent
+              </h3>
+              <span className="text-zinc-600 transition-transform group-hover:translate-x-0.5">
+                →
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-zinc-400">
+              Business question → SQL → result → explanation, with read-only
+              guards (ADR-004).
+            </p>
+          </a>
+        </div>
+      </section>
     </main>
   );
 }

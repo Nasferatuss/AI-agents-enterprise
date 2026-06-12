@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "test", "prod"] = "dev"
     log_level: str = "INFO"
+    cors_origins: list[str] = ["http://localhost:3000"]  # demo console (ui/web)
 
     # Storage
     postgres_dsn: str = "postgresql://workbench:workbench@localhost:5432/workbench"

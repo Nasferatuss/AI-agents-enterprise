@@ -20,6 +20,11 @@ async def test_healthz_ok(client: httpx.AsyncClient):
     assert body["dependencies"] == []
 
 
+async def test_cors_allows_demo_console(client: httpx.AsyncClient):
+    resp = await client.get("/healthz", headers={"Origin": "http://localhost:3000"})
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
 async def test_healthz_deps_reports_all_dependencies(client: httpx.AsyncClient):
     resp = await client.get("/healthz/deps")
     assert resp.status_code == 200
