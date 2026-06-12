@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Evaluation Engine (Sprint 2.1)
     eval_results_dir: str = "data/eval_results"
 
+    # Text-to-SQL app (Sprint 3, ADR-004): sandbox BI database. SQLite file is
+    # auto-created with sample retail data and opened read-only; for Postgres
+    # point this at a sandbox DB with a read-only user.
+    bi_database_url: str = "sqlite:///examples/bi/retail.db"
+
 
 @lru_cache
 def get_settings() -> Settings:

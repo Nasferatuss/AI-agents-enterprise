@@ -21,6 +21,7 @@ ui/web/next-env.d.ts
 *.tsbuildinfo
 
 # Env & data artifacts
+examples/bi/*.db
 .env
 data/*
 !data/.gitkeep

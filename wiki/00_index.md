@@ -39,8 +39,12 @@ AgentRun-трейс каждого шага (семя [[adr-006-custom-trace-sch
 (retrieval-метрики, citation accuracy, LLM-judges на judge-tier, synthetic QA,
 отчёты в data/eval_results) → [[rag]] · [[rag-evaluation-lab]]. ADR-009: сервис на Mac,
 GPU-машина = inference (инструкция: `docs/setup.md`).
-Следующий шаг: **Sprint 3 — Text-to-SQL Agent** ([[text-to-sql-rag-agent]]).
-Детали → [[phases-and-sprints]].
+**Sprint 3 — Text-to-SQL Agent: done (2026-06-12).** `apps/text2sql` — первый demo-app:
+sqlglot-гарды по [[adr-004-readonly-sql-safety]] (read-only, allowlist, LIMIT, sandbox DB,
+ro-соединение), schema-aware агент с tool `run_sql`, API `/v1/apps/text2sql/*` →
+[[text-to-sql-rag-agent]] (status: active).
+Следующий шаг: **Sprint 3.1 — BI UI** (Next.js: вопрос → SQL → таблица → trace) либо
+**Sprint 4 — Orchestrator v0**. Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -50,7 +54,7 @@ GPU-машина = inference (инструкция: `docs/setup.md`).
 | # | Модуль | Статус | MVP |
 |---|--------|--------|-----|
 | 1 | [[enterprise-workflow-orchestrator]] | draft | ✅ ядро |
-| 2 | [[text-to-sql-rag-agent]] | draft | ✅ |
+| 2 | [[text-to-sql-rag-agent]] | active | ✅ |
 | 3 | [[rag-evaluation-lab]] | active | ✅ |
 | 4 | [[agent-observability-console]] | draft | ✅ сквозной |
 | 5 | [[business-process-investigator]] | draft | |
