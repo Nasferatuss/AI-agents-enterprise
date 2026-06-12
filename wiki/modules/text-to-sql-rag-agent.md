@@ -26,8 +26,13 @@ SQL generation, **SQL validation**, safe query execution, explanation.
 - **API**: `GET /v1/apps/text2sql/schema`, `POST /v1/apps/text2sql/ask` →
   `{answer, sql_calls[], run}` — полный путь вопрос → SQL → результат (DoD под UI).
 
-**Sprint 3.1:** BI UI — таблица результата, generated SQL, reasoning trace,
-chart placeholder. — next
+**Sprint 3.1:** BI UI ✅ done 2026-06-12: страница `/text2sql` в demo console
+(`ui/web`) — вопрос (+example-чипы) → Answer (tokens/cost/status) → каждый SQL-вызов
+(подсвеченный SQL + таблица результата; отклонённый SQL показан как rejected) →
+chart placeholder (Recharts позже) → collapsible reasoning trace (по шагам:
+provider/model/latency/cost, tool-вызовы с ok/error). CORS в gateway
+(`WB_CORS_ORIGINS`). **DoD модуля выполнен**: UI показывает полный путь
+вопрос → SQL → результат.
 
 **DoD:** пользователь задаёт вопрос → получает SQL, результат, объяснение; UI
 показывает полный путь вопрос → SQL → результат.
