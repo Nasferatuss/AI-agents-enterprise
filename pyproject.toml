@@ -12,6 +12,8 @@ dependencies = [
     "workbench-app-text2sql",
     "workbench-orchestrator",
     "workbench-observability",
+    "workbench-app-process",
+    "workbench-app-compliance",
 ]
 
 [dependency-groups]
@@ -23,7 +25,7 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
@@ -34,15 +36,17 @@ workbench-evals = { workspace = true }
 workbench-app-text2sql = { workspace = true }
 workbench-orchestrator = { workspace = true }
 workbench-observability = { workspace = true }
+workbench-app-process = { workspace = true }
+workbench-app-compliance = { workspace = true }
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src", "platform/evals/src", "platform/orchestrator/src", "platform/observability/src", "apps/text2sql/src"]
+src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src", "platform/evals/src", "platform/orchestrator/src", "platform/observability/src", "apps/text2sql/src", "apps/process_investigator/src", "apps/compliance_reviewer/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "platform/observability/tests", "apps/text2sql/tests", "tests"]
+testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "platform/observability/tests", "apps/text2sql/tests", "apps/process_investigator/tests", "apps/compliance_reviewer/tests", "tests"]

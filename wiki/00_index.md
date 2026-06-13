@@ -51,13 +51,15 @@ JSON payload), SQLAlchemy-async (sqlite локально / Postgres в стек�
 run, API `/v1/observability/*` + страница `/observability` (dashboard, failure taxonomy, trace
 detail) → [[agent-observability-console]]. **Все 4 MVP-модуля + ядро готовы по v0; первый реальный
 коннект к БД.**
-**Phase 4 — QA: done (2026-06-13).** Functional e2e journey-тест, eval-регрессия (CI gate),
-security-review + adversarial SQL-suite (нашёл и починил 2 бага в SQL-guard) + хардненинг
-(`docs/security.md`), UX (`docs/demo.md`, `make seed`, README). 137 тестов, lint чистый.
-**MVP готов и захардненен.** Риски в [[risk-register]] помечены митигированными.
-Следующий шаг по roadmap — **Phase 5 Launch** (публичный релиз, demo-видео) либо **Sprint 6+**
-(portfolio-модули: process-investigator, compliance, mcp-deep-research, computer-use-QA,
-synthetic-eval-gen, incident-response). Детали → [[phases-and-sprints]].
+**Phase 4 — QA: done (2026-06-13).** Eval-регрессия (CI gate), security-review +
+adversarial SQL-suite (нашёл и починил 2 бага), хардненинг, UX. 137 тестов. `docs/security.md`.
+**Sprint 6 + 6.1 — Process Investigator + Compliance Reviewer: done (2026-06-13).**
+`apps/process_investigator` (документ → entities/process-map-Mermaid/contradictions/backlog,
+страница `/process`) + `apps/compliance_reviewer` (детерминированный PII+policy+risk-score,
+LLM только narrative; страница `/compliance`) → модули №5,6 active. **156 тестов, 6 из 10
+модулей готовы.**
+Следующий шаг — **Sprint 7 — MCP Tool Gateway + Deep Research** ([[mcp-deep-research-agent]],
+[[mcp-tool-use]], [[adr-005-mcp-security-boundary]]) либо Phase 5 Launch. Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -70,8 +72,8 @@ synthetic-eval-gen, incident-response). Детали → [[phases-and-sprints]].
 | 2 | [[text-to-sql-rag-agent]] | active | ✅ |
 | 3 | [[rag-evaluation-lab]] | active | ✅ |
 | 4 | [[agent-observability-console]] | active | ✅ сквозной |
-| 5 | [[business-process-investigator]] | draft | |
-| 6 | [[compliance-risk-reviewer]] | draft | |
+| 5 | [[business-process-investigator]] | active | |
+| 6 | [[compliance-risk-reviewer]] | active | |
 | 7 | [[mcp-deep-research-agent]] | draft | |
 | 8 | [[guarded-computer-use-qa-agent]] | draft | |
 | 9 | [[synthetic-eval-generator]] | draft | |
