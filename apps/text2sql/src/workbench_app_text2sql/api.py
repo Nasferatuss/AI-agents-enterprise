@@ -9,6 +9,7 @@ from workbench_app_text2sql.agent import build_agent, get_engine
 from workbench_app_text2sql.schema import schema_description
 from workbench_runtime.agent import run_agent
 from workbench_runtime.router import NoProviderAvailableError
+from workbench_runtime.tracing import record_agent_run
 from workbench_runtime.types import AgentRun
 
 router = APIRouter(prefix="/v1/apps/text2sql", tags=["text2sql"])
@@ -77,4 +78,5 @@ async def ask(req: AskRequest) -> AskResponse:
         run = await run_agent(agent, req.question)
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await record_agent_run(run, name="text2sql")  # trace under the app name
     return AskResponse(answer=run.final_text, sql_calls=_extract_sql_calls(run), run=run)

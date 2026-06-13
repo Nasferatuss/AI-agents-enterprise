@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from workbench_runtime.agent import run_agent
 from workbench_runtime.demo import AGENTS
 from workbench_runtime.router import NoProviderAvailableError
+from workbench_runtime.tracing import record_agent_run
 from workbench_runtime.types import AgentRun
 
 router = APIRouter(prefix="/v1/agents", tags=["agents"])
@@ -35,6 +36,8 @@ async def run(name: str, req: RunRequest) -> AgentRun:
     if agent is None:
         raise HTTPException(status_code=404, detail=f"unknown agent: {name}")
     try:
-        return await run_agent(agent, req.input)
+        run = await run_agent(agent, req.input)
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await record_agent_run(run)
+    return run

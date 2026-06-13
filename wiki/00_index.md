@@ -42,14 +42,18 @@ GPU-машина = inference (инструкция: `docs/setup.md`).
 **Sprint 3 + 3.1 — Text-to-SQL Agent + BI UI: done (2026-06-12).** `apps/text2sql`
 (sqlglot-гарды по [[adr-004-readonly-sql-safety]], schema-aware агент, API) + страница
 `/text2sql` в demo console. **DoD модуля №2 выполнен** → [[text-to-sql-rag-agent]].
-**Sprint 4 + 4.1 — Workflow Orchestrator v0 + Human-in-the-loop: done (2026-06-13).**
-`platform/orchestrator` — предсказуемая resumable state machine ([[adr-007-predictable-orchestration]]):
-steps/transitions/retries/branching + **approval gate** (pause ДО risky action → approve/reject →
-audit log, первый [[governance]]-механизм). Demo `content_brief` и `access_request` (с gate),
-страница `/workflows` в UI (pending-approval + audit). **Все 3 MVP-модуля + ядро готовы по v0;
-DoD модуля-оркестратора выполнен** → [[enterprise-workflow-orchestrator]].
-Следующий шаг: **Sprint 5 — Trace Logging + Observability UI** ([[agent-observability-console]]:
-persist накопленных AgentRun/WorkflowRun/EvalReport в Postgres + UI). Детали → [[phases-and-sprints]].
+**Sprint 4 + 4.1 — Workflow Orchestrator v0 + HITL: done (2026-06-13).** `platform/orchestrator`
+([[adr-007-predictable-orchestration]]): resumable state machine + approval gate (audit log,
+первый [[governance]]-механизм), страница `/workflows`.
+**Sprint 5 + 5.1 — Trace Logging + Observability Console: done (2026-06-13).** `platform/observability`
+— custom trace schema ([[adr-006-custom-trace-schema]]: один `traces` table, aggregate-колонки +
+JSON payload), SQLAlchemy-async (sqlite локально / Postgres в стеке), запись best-effort на каждый
+run, API `/v1/observability/*` + страница `/observability` (dashboard, failure taxonomy, trace
+detail) → [[agent-observability-console]]. **Все 4 MVP-модуля + ядро готовы по v0; первый реальный
+коннект к БД.**
+Следующий шаг по roadmap — **Sprint 6+: portfolio-модули** (process investigator, compliance,
+MCP deep research, computer-use QA, synthetic eval gen, incident response) либо полировка MVP /
+Phase 4 QA. Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -61,7 +65,7 @@ persist накопленных AgentRun/WorkflowRun/EvalReport в Postgres + UI)
 | 1 | [[enterprise-workflow-orchestrator]] | active | ✅ ядро |
 | 2 | [[text-to-sql-rag-agent]] | active | ✅ |
 | 3 | [[rag-evaluation-lab]] | active | ✅ |
-| 4 | [[agent-observability-console]] | draft | ✅ сквозной |
+| 4 | [[agent-observability-console]] | active | ✅ сквозной |
 | 5 | [[business-process-investigator]] | draft | |
 | 6 | [[compliance-risk-reviewer]] | draft | |
 | 7 | [[mcp-deep-research-agent]] | draft | |

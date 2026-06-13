@@ -1,7 +1,7 @@
 ---
 type: concept
 sources: ["Дорожная карта.pdf"]
-updated: 2026-06-07
+updated: 2026-06-13
 ---
 
 # Observability
@@ -13,6 +13,10 @@ failure taxonomy. Сквозной MVP-приоритет.
 Начинать с custom schema → [[adr-006-custom-trace-schema]].
 
 **Стек:** OpenTelemetry, Langfuse, structured logs, custom trace viewer → [[tech-stack]].
+
+**Реализовано (Sprint 5, 2026-06-13):** `platform/observability` — custom trace
+schema (один `traces` table: aggregate-колонки + JSON payload), запись best-effort на каждый
+run, API + UI `/observability` (dashboard, failure taxonomy, trace detail) → [[adr-006-custom-trace-schema]].
 
 **Модуль-витрина:** [[agent-observability-console]]. Питает [[incident-response-agent]]
 (failed traces → RCA).

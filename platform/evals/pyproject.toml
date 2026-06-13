@@ -7,9 +7,11 @@ dependencies = [
     "workbench-shared",
     "workbench-runtime",
     "workbench-rag",
+    "workbench-observability",
 ]
 
 [tool.uv.sources]
+workbench-observability = { workspace = true }
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-rag = { workspace = true }

@@ -7,9 +7,11 @@ dependencies = [
     "fastapi>=0.115",
     "workbench-shared",
     "workbench-runtime",
+    "workbench-observability",
 ]
 
 [tool.uv.sources]
+workbench-observability = { workspace = true }
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 

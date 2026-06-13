@@ -7,9 +7,11 @@ dependencies = [
     "anthropic>=0.92",
     "httpx>=0.28",
     "workbench-shared",
+    "workbench-observability",
 ]
 
 [tool.uv.sources]
+workbench-observability = { workspace = true }
 workbench-shared = { workspace = true }
 
 [build-system]

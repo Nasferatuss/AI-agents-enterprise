@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from workbench_orchestrator import registry
 from workbench_orchestrator.engine import ApprovalError
+from workbench_orchestrator.tracing import record_workflow_run
 from workbench_orchestrator.types import WorkflowInfo, WorkflowRun
 from workbench_runtime.router import NoProviderAvailableError
 
@@ -51,14 +52,16 @@ async def run(name: str, req: RunRequest) -> WorkflowRun:
     if name not in registry.WORKFLOWS:
         raise HTTPException(status_code=404, detail=f"unknown workflow: {name}")
     try:
-        return await registry.run_workflow(name, req.input)
+        wf_run = await registry.run_workflow(name, req.input)
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await record_workflow_run(wf_run)  # skipped automatically if awaiting_approval
+    return wf_run
 
 
 async def _decide(run_id: str, decision, req: ApprovalRequest) -> WorkflowRun:
     try:
-        return await registry.resume_run(
+        resumed = await registry.resume_run(
             run_id, decision=decision, actor=req.actor, reason=req.reason
         )
     except KeyError as exc:
@@ -67,6 +70,8 @@ async def _decide(run_id: str, decision, req: ApprovalRequest) -> WorkflowRun:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await record_workflow_run(resumed)  # now terminal → recorded
+    return resumed
 
 
 @router.post("/runs/{run_id}/approve", response_model=WorkflowRun)

@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     # point this at a sandbox DB with a read-only user.
     bi_database_url: str = "sqlite:///examples/bi/retail.db"
 
+    # Observability trace store (Sprint 5, ADR-006). Defaults to a local sqlite
+    # file so traces work without Docker; `make up` overrides this to Postgres
+    # (postgresql+asyncpg://…). Always an async SQLAlchemy URL.
+    trace_db_url: str = "sqlite+aiosqlite:///data/traces.db"
+
 
 @lru_cache
 def get_settings() -> Settings:

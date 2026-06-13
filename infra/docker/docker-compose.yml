@@ -45,6 +45,7 @@ services:
     environment:
       WB_ENV: dev
       WB_POSTGRES_DSN: postgresql://workbench:workbench@postgres:5432/workbench
+      WB_TRACE_DB_URL: postgresql+asyncpg://workbench:workbench@postgres:5432/workbench
       WB_REDIS_URL: redis://redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
     ports:

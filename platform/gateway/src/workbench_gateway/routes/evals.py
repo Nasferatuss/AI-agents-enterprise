@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from workbench_evals import EvalDataset, EvalReport, generate_dataset, run_rag_eval
 from workbench_evals.synthetic import SyntheticGenerationError
+from workbench_evals.tracing import record_eval_report
 from workbench_gateway.routes import rag as rag_routes
 from workbench_rag.embeddings import EmbeddingError
 from workbench_runtime import get_router
@@ -41,8 +42,12 @@ async def run_rag(req: RagEvalRequest) -> EvalReport:
         dataset = req.dataset or await generate_dataset(
             pipeline, model_router, name=f"synthetic-{req.index}", n=req.synthetic.n
         )
-        return await run_rag_eval(pipeline, model_router, dataset, top_k=req.top_k, judge=req.judge)
+        report = await run_rag_eval(
+            pipeline, model_router, dataset, top_k=req.top_k, judge=req.judge
+        )
     except (NoProviderAvailableError, EmbeddingError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SyntheticGenerationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await record_eval_report(report)
+    return report
