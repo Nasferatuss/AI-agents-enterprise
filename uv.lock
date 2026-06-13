@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "workbench",
     "workbench-app-compliance",
+    "workbench-app-cua",
     "workbench-app-process",
     "workbench-app-research",
     "workbench-app-text2sql",
@@ -1189,6 +1190,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "workbench-app-compliance" },
+    { name = "workbench-app-cua" },
     { name = "workbench-app-process" },
     { name = "workbench-app-research" },
     { name = "workbench-app-text2sql" },
@@ -1213,6 +1215,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "workbench-app-compliance", editable = "apps/compliance_reviewer" },
+    { name = "workbench-app-cua", editable = "apps/computer_use_qa" },
     { name = "workbench-app-process", editable = "apps/process_investigator" },
     { name = "workbench-app-research", editable = "apps/deep_research" },
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },
@@ -1249,6 +1252,25 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
+]
+
+[[package]]
+name = "workbench-app-cua"
+version = "0.1.0"
+source = { editable = "apps/computer_use_qa" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "workbench-runtime" },
+    { name = "workbench-shared" },
+    { name = "workbench-toolgateway" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "workbench-runtime", editable = "platform/runtime" },
+    { name = "workbench-shared", editable = "platform/shared" },
+    { name = "workbench-toolgateway", editable = "platform/toolgateway" },
 ]
 
 [[package]]
@@ -1335,6 +1357,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "workbench-app-compliance" },
+    { name = "workbench-app-cua" },
     { name = "workbench-app-process" },
     { name = "workbench-app-research" },
     { name = "workbench-app-text2sql" },
@@ -1351,6 +1374,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
     { name = "workbench-app-compliance", editable = "apps/compliance_reviewer" },
+    { name = "workbench-app-cua", editable = "apps/computer_use_qa" },
     { name = "workbench-app-process", editable = "apps/process_investigator" },
     { name = "workbench-app-research", editable = "apps/deep_research" },
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },

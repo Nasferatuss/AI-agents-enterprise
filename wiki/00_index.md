@@ -55,13 +55,15 @@ detail) → [[agent-observability-console]]. **Все 4 MVP-модуля + яд�
 adversarial SQL-suite (нашёл и починил 2 бага), хардненинг, UX. 137 тестов. `docs/security.md`.
 **Sprint 6 + 6.1 — Process Investigator + Compliance Reviewer: done.** Модули №5,6
 (`/process`, `/compliance`).
-**Sprint 7 + 7.1 — MCP Tool Gateway + Deep Research: done (2026-06-13).** `platform/toolgateway`
-— registry + permission allowlist + audit log, no shell ([[adr-005-mcp-security-boundary]]),
-connectors web_search/fetch/kb_search; `apps/deep_research` — plan→research(via gateway)→cited
-report + tool-trace, страница `/research` → модуль №7 active. **169 тестов, 7 из 10 модулей готовы.**
-Следующий шаг — **Sprint 9 — Synthetic Eval Gen + Incident Response** (ближе к готовому коду:
-evals/observability) ЛИБО **Sprint 8 — Computer-Use QA** (нужен браузер) ЛИБО Phase 5 Launch.
-Детали → [[phases-and-sprints]].
+**Sprint 7 + 7.1 — MCP Tool Gateway + Deep Research: done.** `platform/toolgateway` + `apps/deep_research`
+(модуль №7, `/research`).
+**Sprint 8 + 8.1 — Legacy UI Sandbox + Guarded Computer-Use QA: done (2026-06-13).**
+`apps/computer_use_qa` — детерминированный legacy-UI state machine с 2 заложенными багами;
+QA-агент водит его **только через Tool Gateway** (action space observe/click/type, allowlist+
+audit); scenario runner → bug report. Страница `/qa`. v0 = виртуальный UI за тем же action-
+интерфейсом (production → Playwright+vision). Модуль №8 active. **178 тестов, 8 из 10 модулей готовы.**
+Следующий шаг — **Sprint 9 — Synthetic Eval Generator + Incident Response** (модули №9,10, последние;
+ложатся на готовый код evals/observability) ЛИБО Phase 5 Launch. Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -77,7 +79,7 @@ evals/observability) ЛИБО **Sprint 8 — Computer-Use QA** (нужен бр�
 | 5 | [[business-process-investigator]] | active | |
 | 6 | [[compliance-risk-reviewer]] | active | |
 | 7 | [[mcp-deep-research-agent]] | active | |
-| 8 | [[guarded-computer-use-qa-agent]] | draft | |
+| 8 | [[guarded-computer-use-qa-agent]] | active | |
 | 9 | [[synthetic-eval-generator]] | draft | |
 | 10 | [[incident-response-agent]] | draft | |
 

@@ -184,6 +184,23 @@ export default async function Home() {
               audit log (ADR-005).
             </p>
           </a>
+          <a
+            href="/qa"
+            className="group rounded-lg border border-zinc-800 p-5 transition-colors hover:border-zinc-600"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-zinc-100">
+                Guarded Computer-Use QA
+              </h3>
+              <span className="text-zinc-600 transition-transform group-hover:translate-x-0.5">
+                →
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-zinc-400">
+              A QA agent drives a legacy UI sandbox through a guarded action space
+              and reports bugs.
+            </p>
+          </a>
         </div>
       </section>
     </main>

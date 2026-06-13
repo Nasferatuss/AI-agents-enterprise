@@ -1,7 +1,7 @@
 ---
 type: concept
 sources: ["Дорожная карта.pdf"]
-updated: 2026-06-07
+updated: 2026-06-13
 ---
 
 # Computer Use
