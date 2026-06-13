@@ -13,6 +13,7 @@ members = [
     "workbench-app-text2sql",
     "workbench-evals",
     "workbench-gateway",
+    "workbench-orchestrator",
     "workbench-rag",
     "workbench-runtime",
     "workbench-shared",
@@ -1131,6 +1132,7 @@ dependencies = [
     { name = "workbench-app-text2sql" },
     { name = "workbench-evals" },
     { name = "workbench-gateway" },
+    { name = "workbench-orchestrator" },
     { name = "workbench-rag" },
     { name = "workbench-runtime" },
     { name = "workbench-shared" },
@@ -1149,6 +1151,7 @@ requires-dist = [
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },
     { name = "workbench-evals", editable = "platform/evals" },
     { name = "workbench-gateway", editable = "platform/gateway" },
+    { name = "workbench-orchestrator", editable = "platform/orchestrator" },
     { name = "workbench-rag", editable = "platform/rag" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
@@ -1209,6 +1212,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
     { name = "workbench-app-text2sql" },
     { name = "workbench-evals" },
+    { name = "workbench-orchestrator" },
     { name = "workbench-rag" },
     { name = "workbench-runtime" },
     { name = "workbench-shared" },
@@ -1220,7 +1224,25 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },
     { name = "workbench-evals", editable = "platform/evals" },
+    { name = "workbench-orchestrator", editable = "platform/orchestrator" },
     { name = "workbench-rag", editable = "platform/rag" },
+    { name = "workbench-runtime", editable = "platform/runtime" },
+    { name = "workbench-shared", editable = "platform/shared" },
+]
+
+[[package]]
+name = "workbench-orchestrator"
+version = "0.1.0"
+source = { editable = "platform/orchestrator" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "workbench-runtime" },
+    { name = "workbench-shared" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
 ]

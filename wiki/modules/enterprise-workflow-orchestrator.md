@@ -1,8 +1,8 @@
 ---
 type: module
-status: draft
+status: active
 sources: ["Дорожная карта.pdf"]
-updated: 2026-06-07
+updated: 2026-06-13
 ---
 
 # Enterprise Workflow Orchestrator
@@ -14,8 +14,20 @@ updated: 2026-06-07
 failure states, **human approval** gates.
 
 **Sprint 4 (1 нед):** Orchestrator v0 — можно собрать workflow из 3–5 шагов и выполнить.
+✅ done 2026-06-13: `platform/orchestrator` (`workbench-orchestrator`) — предсказуемая
+state machine по [[adr-007-predictable-orchestration]]:
+- **Step** = async-функция над shared state → возвращает updates для merge; **transitions**
+  явные (`next` = имя шага / branch-функция над state / None=конец); **retries** per-step
+  с задержкой; глобальный step-budget против циклов в ветвлениях.
+- Control flow детерминированный и auditable (LLM не решает граф): каждый StepAttempt
+  пишется в `WorkflowRun` (статус, latency, error, updates) — семя [[adr-006-custom-trace-schema]].
+- Demo-workflow `content_brief` (validate → draft → judge-review → revise-loop → finalize)
+  показывает composable pattern: LLM-вызовы через [[adr-008-model-router-design]] **внутри**
+  шагов (draft=standard, review=judge-tier), граф снаружи.
+- **API**: `GET /v1/workflows`, `POST /v1/workflows/{name}/run`, `GET /v1/workflows/runs[/{id}]`.
+
 **Sprint 4.1:** Human-in-the-loop — approval gate перед risky action; UI показывает
-pending approval и audit log → [[governance]].
+pending approval и audit log → [[governance]]. — next
 
 **DoD:** workflow из 3–5 шагов выполняется; pending-approval и audit видны в UI.
 **Стек:** LangGraph / custom state machine, FastAPI, Next.js, PostgreSQL.

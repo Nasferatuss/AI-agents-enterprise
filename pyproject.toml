@@ -10,6 +10,7 @@ dependencies = [
     "workbench-rag",
     "workbench-evals",
     "workbench-app-text2sql",
+    "workbench-orchestrator",
 ]
 
 [dependency-groups]
@@ -21,7 +22,7 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "apps/text2sql"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "platform/orchestrator", "apps/text2sql"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
@@ -30,15 +31,16 @@ workbench-runtime = { workspace = true }
 workbench-rag = { workspace = true }
 workbench-evals = { workspace = true }
 workbench-app-text2sql = { workspace = true }
+workbench-orchestrator = { workspace = true }
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src", "platform/evals/src", "apps/text2sql/src"]
+src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src", "platform/evals/src", "platform/orchestrator/src", "apps/text2sql/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "apps/text2sql/tests", "tests"]
+testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "apps/text2sql/tests", "tests"]

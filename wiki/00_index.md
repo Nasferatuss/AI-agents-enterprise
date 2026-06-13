@@ -41,10 +41,14 @@ AgentRun-трейс каждого шага (семя [[adr-006-custom-trace-sch
 GPU-машина = inference (инструкция: `docs/setup.md`).
 **Sprint 3 + 3.1 — Text-to-SQL Agent + BI UI: done (2026-06-12).** `apps/text2sql`
 (sqlglot-гарды по [[adr-004-readonly-sql-safety]], schema-aware агент, API) + страница
-`/text2sql` в demo console (вопрос → SQL → таблица → reasoning trace). **DoD модуля №2
-выполнен** → [[text-to-sql-rag-agent]].
-Следующий шаг: **Sprint 4 — Orchestrator v0** ([[enterprise-workflow-orchestrator]],
-[[adr-007-predictable-orchestration]]). Детали → [[phases-and-sprints]].
+`/text2sql` в demo console. **DoD модуля №2 выполнен** → [[text-to-sql-rag-agent]].
+**Sprint 4 — Workflow Orchestrator v0: done (2026-06-13).** `platform/orchestrator` —
+предсказуемая state machine ([[adr-007-predictable-orchestration]]): steps/transitions/retries/
+branching, step-budget, каждый шаг в `WorkflowRun`-трейсе; demo-workflow `content_brief`
+(draft → judge-review → revise-loop) поверх [[adr-008-model-router-design]]; API `/v1/workflows/*`
+→ [[enterprise-workflow-orchestrator]] (status: active). **Все 3 MVP-модуля + ядро готовы по v0.**
+Следующий шаг: **Sprint 4.1 — Human-in-the-loop approval** ([[governance]]) либо
+Sprint 5 — Trace Logging + Observability UI. Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -53,7 +57,7 @@ GPU-машина = inference (инструкция: `docs/setup.md`).
 ## Модули (10) — в рекомендуемом порядке сборки
 | # | Модуль | Статус | MVP |
 |---|--------|--------|-----|
-| 1 | [[enterprise-workflow-orchestrator]] | draft | ✅ ядро |
+| 1 | [[enterprise-workflow-orchestrator]] | active | ✅ ядро |
 | 2 | [[text-to-sql-rag-agent]] | active | ✅ |
 | 3 | [[rag-evaluation-lab]] | active | ✅ |
 | 4 | [[agent-observability-console]] | draft | ✅ сквозной |

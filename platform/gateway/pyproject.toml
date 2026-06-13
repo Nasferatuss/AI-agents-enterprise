@@ -11,6 +11,7 @@ dependencies = [
     "workbench-rag",
     "workbench-evals",
     "workbench-app-text2sql",
+    "workbench-orchestrator",
 ]
 
 [tool.uv.sources]
@@ -19,6 +20,7 @@ workbench-runtime = { workspace = true }
 workbench-rag = { workspace = true }
 workbench-evals = { workspace = true }
 workbench-app-text2sql = { workspace = true }
+workbench-orchestrator = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
