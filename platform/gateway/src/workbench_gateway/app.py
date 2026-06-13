@@ -13,6 +13,7 @@ from workbench_app_research.api import router as research_router
 from workbench_app_text2sql.api import router as text2sql_router
 from workbench_gateway import __version__
 from workbench_gateway.routes import agents, evals, health, llm, observability, rag
+from workbench_gateway.security import ApiKeyMiddleware, RateLimitMiddleware
 from workbench_observability import init_db
 from workbench_orchestrator.api import router as workflows_router
 from workbench_shared.config import get_settings
@@ -38,12 +39,16 @@ def create_app() -> FastAPI:
         version=__version__,
         lifespan=lifespan,
     )
+    # Middleware runs outermost-first (last added → first executed): rate-limit,
+    # then API key, then CORS. Both security middlewares are no-ops unless configured.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().cors_origins,
         allow_methods=["GET", "POST"],  # the only methods the console uses
-        allow_headers=["Content-Type", "X-Approval-Token"],
+        allow_headers=["Content-Type", "X-Approval-Token", "X-API-Key"],
     )
+    app.add_middleware(ApiKeyMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.include_router(health.router)
     app.include_router(llm.router)
     app.include_router(agents.router)

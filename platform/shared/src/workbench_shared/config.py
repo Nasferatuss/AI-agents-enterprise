@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     # Optional shared-secret gate on workflow approve/reject (governance control).
     # Empty = open (local demo); set WB_APPROVAL_TOKEN to require an X-Approval-Token header.
     approval_token: str = ""
+    # Optional gateway API auth + rate limit (off by default so the local demo is open).
+    # WB_API_KEY: when set, /v1/* requires a matching X-API-Key header.
+    # WB_RATE_LIMIT_PER_MIN: when > 0, cap POST /v1/* per client IP per minute.
+    api_key: str = ""
+    rate_limit_per_min: int = 0
 
     # Storage
     postgres_dsn: str = "postgresql://workbench:workbench@localhost:5432/workbench"

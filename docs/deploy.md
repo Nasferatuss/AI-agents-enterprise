@@ -13,6 +13,15 @@ store uses the Compose Postgres (`WB_TRACE_DB_URL` is overridden to the async
 Postgres DSN). Provider keys / a local model are optional — read-only views work
 without them; see [`setup.md`](setup.md) to wire up real models.
 
+**Trace store schema.** On sqlite (local dev / tests) the schema is created
+automatically at startup. On **Postgres** the schema is owned by Alembic — apply
+migrations once:
+
+```bash
+WB_TRACE_DB_URL=postgresql+asyncpg://workbench:workbench@localhost:5432/workbench \
+  make migrate
+```
+
 ## Public demo — VPS / Fly.io / Render
 
 The service is provider-agnostic and not tied to the GPU box (ADR-009): on a host

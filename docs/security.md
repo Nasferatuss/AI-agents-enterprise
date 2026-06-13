@@ -54,26 +54,27 @@ approve/reject when configured.
   row_count) so traces don't duplicate sensitive query data.
 - **Trace queries** use SQLAlchemy bound parameters — no SQL injection.
 
-### Transport
+### Transport & access
 
 CORS restricted to the console origin and the methods/headers it uses. Input
 length caps on `question` / `input` / `actor` bound LLM token cost and
 audit-log poisoning.
 
-## Known limitations (out of scope for the MVP; hardening backlog)
+**Optional API auth & rate limiting** (off by default so the local demo is open;
+enabled purely from config):
+- `WB_API_KEY` → every `/v1/*` request must carry a matching `X-API-Key` header.
+- `WB_RATE_LIMIT_PER_MIN` → caps `POST /v1/*` per client IP per minute.
 
-Documented honestly rather than hidden — these are the gaps a reviewer should
-know about before exposing the service to an untrusted network:
+## Known limitations (hardening backlog)
 
-| Gap | Risk | Planned fix |
-|-----|------|-------------|
-| **No API authentication** on the gateway | Anyone reaching the port can run agents (LLM cost) and read traces | `X-API-Key` dependency from env; per-route auth |
-| **No rate limiting** on cost-generating endpoints | Request-loop can deplete API credits | `slowapi` global IP limit on `/v1/chat`, `/run`, `/ask`, `/evals` |
-| **Approval `actor` is self-attested** unless `WB_APPROVAL_TOKEN` set | Audit identity unverifiable | Real auth + role check (`require_approver_role`) |
-| `GET /v1/models` exposes provider topology | Fingerprinting | Put behind auth in production |
+| Gap | Status / risk |
+|-----|---------------|
+| API auth & rate limiting | ✅ available, **off by default** — set `WB_API_KEY` / `WB_RATE_LIMIT_PER_MIN` before exposing to a network. Rate limiter is per-process; multi-instance needs Redis. |
+| **Approval `actor` is self-attested** unless `WB_APPROVAL_TOKEN` set | Audit identity unverifiable without real auth — add a role check (`require_approver_role`) for production. |
+| `GET /v1/models` exposes provider topology | Fingerprinting only — put behind `WB_API_KEY` in production. |
 
-These are appropriate to defer for a local demo but **must** be closed before any
-multi-user or internet-exposed deployment (Phase 6 hardening).
+For an internet-exposed deployment: set `WB_API_KEY`, `WB_RATE_LIMIT_PER_MIN`,
+and `WB_CORS_ORIGINS`, and front the service with TLS (see `docs/deploy.md`).
 
 ## Running the security QA
 

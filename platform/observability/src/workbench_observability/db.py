@@ -50,5 +50,11 @@ def get_sessionmaker() -> async_sessionmaker:
 
 
 async def init_db() -> None:
-    async with get_engine().begin() as conn:
+    """Bootstrap the schema for sqlite (local dev / tests). For Postgres the
+    schema is owned by Alembic — run `make migrate` — so this is a no-op there to
+    avoid racing create_all against the migration history."""
+    engine = get_engine()
+    if not engine.url.get_backend_name().startswith("sqlite"):
+        return
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
