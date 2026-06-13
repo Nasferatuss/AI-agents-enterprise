@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from workbench_app_compliance.api import router as compliance_router
 from workbench_app_process.api import router as process_router
+from workbench_app_research.api import router as research_router
 from workbench_app_text2sql.api import router as text2sql_router
 from workbench_gateway import __version__
 from workbench_gateway.routes import agents, evals, health, llm, observability, rag
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(text2sql_router)  # demo apps mount here (composition root)
     app.include_router(process_router)
     app.include_router(compliance_router)
+    app.include_router(research_router)
     log.info("gateway configured", version=__version__)
     return app
 

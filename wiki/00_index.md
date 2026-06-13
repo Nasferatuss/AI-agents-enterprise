@@ -53,13 +53,15 @@ detail) → [[agent-observability-console]]. **Все 4 MVP-модуля + яд�
 коннект к БД.**
 **Phase 4 — QA: done (2026-06-13).** Eval-регрессия (CI gate), security-review +
 adversarial SQL-suite (нашёл и починил 2 бага), хардненинг, UX. 137 тестов. `docs/security.md`.
-**Sprint 6 + 6.1 — Process Investigator + Compliance Reviewer: done (2026-06-13).**
-`apps/process_investigator` (документ → entities/process-map-Mermaid/contradictions/backlog,
-страница `/process`) + `apps/compliance_reviewer` (детерминированный PII+policy+risk-score,
-LLM только narrative; страница `/compliance`) → модули №5,6 active. **156 тестов, 6 из 10
-модулей готовы.**
-Следующий шаг — **Sprint 7 — MCP Tool Gateway + Deep Research** ([[mcp-deep-research-agent]],
-[[mcp-tool-use]], [[adr-005-mcp-security-boundary]]) либо Phase 5 Launch. Детали → [[phases-and-sprints]].
+**Sprint 6 + 6.1 — Process Investigator + Compliance Reviewer: done.** Модули №5,6
+(`/process`, `/compliance`).
+**Sprint 7 + 7.1 — MCP Tool Gateway + Deep Research: done (2026-06-13).** `platform/toolgateway`
+— registry + permission allowlist + audit log, no shell ([[adr-005-mcp-security-boundary]]),
+connectors web_search/fetch/kb_search; `apps/deep_research` — plan→research(via gateway)→cited
+report + tool-trace, страница `/research` → модуль №7 active. **169 тестов, 7 из 10 модулей готовы.**
+Следующий шаг — **Sprint 9 — Synthetic Eval Gen + Incident Response** (ближе к готовому коду:
+evals/observability) ЛИБО **Sprint 8 — Computer-Use QA** (нужен браузер) ЛИБО Phase 5 Launch.
+Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -74,7 +76,7 @@ LLM только narrative; страница `/compliance`) → модули №
 | 4 | [[agent-observability-console]] | active | ✅ сквозной |
 | 5 | [[business-process-investigator]] | active | |
 | 6 | [[compliance-risk-reviewer]] | active | |
-| 7 | [[mcp-deep-research-agent]] | draft | |
+| 7 | [[mcp-deep-research-agent]] | active | |
 | 8 | [[guarded-computer-use-qa-agent]] | draft | |
 | 9 | [[synthetic-eval-generator]] | draft | |
 | 10 | [[incident-response-agent]] | draft | |

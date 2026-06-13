@@ -15,12 +15,14 @@ dependencies = [
     "workbench-observability",
     "workbench-app-process",
     "workbench-app-compliance",
+    "workbench-app-research",
 ]
 
 [tool.uv.sources]
 workbench-observability = { workspace = true }
 workbench-app-process = { workspace = true }
 workbench-app-compliance = { workspace = true }
+workbench-app-research = { workspace = true }
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-rag = { workspace = true }

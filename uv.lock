@@ -12,6 +12,7 @@ members = [
     "workbench",
     "workbench-app-compliance",
     "workbench-app-process",
+    "workbench-app-research",
     "workbench-app-text2sql",
     "workbench-evals",
     "workbench-gateway",
@@ -20,6 +21,7 @@ members = [
     "workbench-rag",
     "workbench-runtime",
     "workbench-shared",
+    "workbench-toolgateway",
 ]
 
 [[package]]
@@ -1188,6 +1190,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "workbench-app-compliance" },
     { name = "workbench-app-process" },
+    { name = "workbench-app-research" },
     { name = "workbench-app-text2sql" },
     { name = "workbench-evals" },
     { name = "workbench-gateway" },
@@ -1196,6 +1199,7 @@ dependencies = [
     { name = "workbench-rag" },
     { name = "workbench-runtime" },
     { name = "workbench-shared" },
+    { name = "workbench-toolgateway" },
 ]
 
 [package.dev-dependencies]
@@ -1210,6 +1214,7 @@ dev = [
 requires-dist = [
     { name = "workbench-app-compliance", editable = "apps/compliance_reviewer" },
     { name = "workbench-app-process", editable = "apps/process_investigator" },
+    { name = "workbench-app-research", editable = "apps/deep_research" },
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },
     { name = "workbench-evals", editable = "platform/evals" },
     { name = "workbench-gateway", editable = "platform/gateway" },
@@ -1218,6 +1223,7 @@ requires-dist = [
     { name = "workbench-rag", editable = "platform/rag" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
+    { name = "workbench-toolgateway", editable = "platform/toolgateway" },
 ]
 
 [package.metadata.requires-dev]
@@ -1260,6 +1266,25 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
+]
+
+[[package]]
+name = "workbench-app-research"
+version = "0.1.0"
+source = { editable = "apps/deep_research" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "workbench-runtime" },
+    { name = "workbench-shared" },
+    { name = "workbench-toolgateway" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "workbench-runtime", editable = "platform/runtime" },
+    { name = "workbench-shared", editable = "platform/shared" },
+    { name = "workbench-toolgateway", editable = "platform/toolgateway" },
 ]
 
 [[package]]
@@ -1311,6 +1336,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"] },
     { name = "workbench-app-compliance" },
     { name = "workbench-app-process" },
+    { name = "workbench-app-research" },
     { name = "workbench-app-text2sql" },
     { name = "workbench-evals" },
     { name = "workbench-observability" },
@@ -1326,6 +1352,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
     { name = "workbench-app-compliance", editable = "apps/compliance_reviewer" },
     { name = "workbench-app-process", editable = "apps/process_investigator" },
+    { name = "workbench-app-research", editable = "apps/deep_research" },
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },
     { name = "workbench-evals", editable = "platform/evals" },
     { name = "workbench-observability", editable = "platform/observability" },
@@ -1430,4 +1457,19 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.7" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "structlog", specifier = ">=24.4" },
+]
+
+[[package]]
+name = "workbench-toolgateway"
+version = "0.1.0"
+source = { editable = "platform/toolgateway" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "workbench-shared" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.10" },
+    { name = "workbench-shared", editable = "platform/shared" },
 ]
