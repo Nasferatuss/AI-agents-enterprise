@@ -1,5 +1,8 @@
 # Enterprise AI Agent Workbench
 
+[![CI](https://github.com/Nasferatuss/AI-agents-enterprise/actions/workflows/ci.yml/badge.svg)](https://github.com/Nasferatuss/AI-agents-enterprise/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Service-oriented platform for building, evaluating, and operating production-grade AI agents.
 One core, ten demo apps — every module demonstrates the full engineering loop:
 **context → tools → reasoning → action → eval → trace → governance → demo.**
@@ -35,6 +38,23 @@ Monorepo around a **Service-Oriented Core**: shared platform capabilities (RAG, 
 observability, context engine, governance, orchestration, model routing) are platform
 services — never re-implemented inside individual demo apps.
 
+```mermaid
+flowchart TD
+  UI["Demo console (Next.js)"] --> GW["API Gateway (FastAPI)"]
+  GW --> APPS["Demo apps · text2sql, process, compliance,<br/>research, computer-use QA, incident response"]
+  GW --> RT["Agent Runtime"]
+  APPS --> RT
+  RT --> ROUTER["Model Router<br/>local → cheap → frontier"]
+  RT --> CTX["Context Engine"]
+  APPS --> RAG["RAG Core → Qdrant"]
+  APPS --> EVALS["Evaluation Engine"]
+  APPS --> ORCH["Orchestrator<br/>+ approval gates"]
+  APPS --> TG["Tool Gateway<br/>allowlist + audit"]
+  RT --> OBS["Observability<br/>trace per run → Postgres"]
+  APPS --> OBS
+  ROUTER --> LLM["Ollama (GPU) · DeepSeek · Kimi · Anthropic · OpenAI"]
+```
+
 ```
 platform/   platform layers: shared, gateway, runtime, rag, evals, orchestrator, observability
 apps/       demo modules built on top of the core (text2sql)
@@ -64,6 +84,14 @@ make up        # full stack via Docker Compose (postgres, qdrant, redis, api)
 make ui        # demo console on :3000
 ```
 
-To wire up real models (local Ollama on a GPU box, or any provider key), see
-[`docs/setup.md`](docs/setup.md). For a guided tour, see [`docs/demo.md`](docs/demo.md);
-for the security model, [`docs/security.md`](docs/security.md).
+## Docs
+
+- [`docs/setup.md`](docs/setup.md) — wire up real models (local Ollama on a GPU box, or provider keys)
+- [`docs/demo.md`](docs/demo.md) — 5-minute guided tour
+- [`docs/deploy.md`](docs/deploy.md) — full-stack Docker + public-demo deployment
+- [`docs/security.md`](docs/security.md) — threat model, controls, known limitations
+- [`CHANGELOG.md`](CHANGELOG.md) · [`wiki/00_index.md`](wiki/00_index.md) — knowledge base (architecture, ADRs, roadmap, risks)
+
+## License
+
+MIT — see [LICENSE](LICENSE).

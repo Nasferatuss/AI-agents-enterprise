@@ -58,6 +58,18 @@ services:
       qdrant:
         condition: service_started
 
+  ui:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.ui
+      args:
+        # baked at build time; for a real deploy set to the public API URL
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
 volumes:
   pg_data:
   qdrant_data:
