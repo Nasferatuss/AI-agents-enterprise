@@ -34,6 +34,22 @@ _FORBIDDEN_NODES = (
     exp.Transaction,
 )
 
+# Functions that read/write the filesystem or load code — they take no table
+# argument, so the table allowlist never sees them. The read-only DB connection
+# is the real boundary; this denylist makes the guard coherent across backends
+# (sqlite load_extension, Postgres pg_read_file / lo_import / COPY, etc.).
+_FORBIDDEN_FUNCTIONS = {
+    "load_extension",
+    "writefile",
+    "readfile",
+    "pg_read_file",
+    "pg_read_binary_file",
+    "pg_ls_dir",
+    "lo_import",
+    "lo_export",
+    "dblink",
+}
+
 
 class SqlGuardError(Exception):
     """Query rejected by the read-only guards; the message goes back to the model."""
@@ -43,7 +59,9 @@ def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->
     """Validate and normalize; returns SQL with LIMIT enforced. Raises SqlGuardError."""
     try:
         statements = sqlglot.parse(sql, read=dialect)
-    except sqlglot.errors.ParseError as exc:
+    except sqlglot.errors.SqlglotError as exc:
+        # SqlglotError is the base of ParseError AND TokenError — malformed or
+        # un-tokenizable input must become a clean rejection, never leak out.
         raise SqlGuardError(f"SQL does not parse: {exc}") from exc
 
     statements = [s for s in statements if s is not None]
@@ -56,6 +74,10 @@ def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->
     for node in tree.walk():
         if isinstance(node, _FORBIDDEN_NODES):
             raise SqlGuardError(f"forbidden operation: {type(node).__name__.upper()}")
+    # Non-standard / dangerous functions parse as Anonymous (unknown to sqlglot).
+    for func in tree.find_all(exp.Anonymous):
+        if func.name and func.name.lower() in _FORBIDDEN_FUNCTIONS:
+            raise SqlGuardError(f"forbidden function: {func.name}")
 
     cte_names = {cte.alias_or_name.lower() for cte in tree.find_all(exp.CTE)}
     allowed = {t.lower() for t in allowed_tables}

@@ -19,7 +19,7 @@ class AgentInfo(BaseModel):
 
 
 class RunRequest(BaseModel):
-    input: str = Field(min_length=1)
+    input: str = Field(min_length=1, max_length=4000)  # bound LLM token cost
 
 
 @router.get("", response_model=list[AgentInfo])

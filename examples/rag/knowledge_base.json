@@ -1,0 +1,60 @@
+{
+  "documents": [
+    {
+      "source": "kb/postgres.md",
+      "text": "# PostgreSQL\n\nPostgreSQL is the relational database of the platform. It stores agent traces, evaluation reports, configuration, and audit logs. Migrations manage schema changes."
+    },
+    {
+      "source": "kb/qdrant.md",
+      "text": "# Qdrant\n\nQdrant is the vector database used for dense retrieval in the RAG core. It stores chunk embeddings and serves cosine-similarity search for semantic lookup."
+    },
+    {
+      "source": "kb/redis.md",
+      "text": "# Redis\n\nRedis handles queues, rate limiting, and temporary state. It is an in-memory key-value store used for caching and ephemeral coordination between services."
+    },
+    {
+      "source": "kb/router.md",
+      "text": "# Model Router\n\nThe model router implements a local-first cost policy. Simple tasks go to local Ollama models on the GPU box, standard tasks to cheap APIs like DeepSeek, and complex reasoning or judge tasks to frontier models. It falls back across providers."
+    },
+    {
+      "source": "kb/observability.md",
+      "text": "# Observability\n\nThe observability console records a trace for every agent, workflow, and evaluation run. It surfaces cost, latency, token usage, and a failure taxonomy. Traces use a custom minimal schema rather than a LangSmith clone."
+    },
+    {
+      "source": "kb/governance.md",
+      "text": "# Governance\n\nGovernance covers approval gates, table allowlists, read-only SQL execution, and PII checks. The workflow orchestrator pauses before a risky action and waits for human approval, recording every decision in an audit log."
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-pg",
+      "question": "Which relational database stores agent traces and audit logs?",
+      "relevant_sources": ["kb/postgres.md"]
+    },
+    {
+      "id": "q-qdrant",
+      "question": "What vector database serves cosine similarity search for dense retrieval?",
+      "relevant_sources": ["kb/qdrant.md"]
+    },
+    {
+      "id": "q-redis",
+      "question": "Which in-memory store handles queues and rate limiting?",
+      "relevant_sources": ["kb/redis.md"]
+    },
+    {
+      "id": "q-router",
+      "question": "How does the model router route simple tasks versus complex reasoning?",
+      "relevant_sources": ["kb/router.md"]
+    },
+    {
+      "id": "q-obs",
+      "question": "What records cost latency and a failure taxonomy for every run?",
+      "relevant_sources": ["kb/observability.md"]
+    },
+    {
+      "id": "q-gov",
+      "question": "Which mechanism pauses for human approval before a risky action and keeps an audit log?",
+      "relevant_sources": ["kb/governance.md"]
+    }
+  ]
+}

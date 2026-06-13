@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     env: Literal["dev", "test", "prod"] = "dev"
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:3000"]  # demo console (ui/web)
+    # Optional shared-secret gate on workflow approve/reject (governance control).
+    # Empty = open (local demo); set WB_APPROVAL_TOKEN to require an X-Approval-Token header.
+    approval_token: str = ""
 
     # Storage
     postgres_dsn: str = "postgresql://workbench:workbench@localhost:5432/workbench"

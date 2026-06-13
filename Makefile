@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install api test lint fmt up down ps logs ui ui-build
+.PHONY: help install api test lint fmt qa eval-regression seed up down ps logs ui ui-build
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -18,6 +18,17 @@ test: ## Run Python tests
 lint: ## Lint Python (ruff check)
 	uv run ruff check .
 	uv run ruff format --check .
+
+qa: ## Full QA gate: lint + tests (incl. eval regression + SQL injection suite)
+	uv run ruff check .
+	uv run ruff format --check .
+	uv run pytest -q
+
+eval-regression: ## Run the retrieval regression gate only
+	uv run pytest tests/test_eval_regression.py -q
+
+seed: ## Seed the trace store with sample runs (for the observability demo)
+	uv run python scripts/seed_demo.py
 
 fmt: ## Format Python
 	uv run ruff format .

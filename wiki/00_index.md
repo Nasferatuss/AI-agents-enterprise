@@ -51,9 +51,13 @@ JSON payload), SQLAlchemy-async (sqlite локально / Postgres в стек�
 run, API `/v1/observability/*` + страница `/observability` (dashboard, failure taxonomy, trace
 detail) → [[agent-observability-console]]. **Все 4 MVP-модуля + ядро готовы по v0; первый реальный
 коннект к БД.**
-Следующий шаг по roadmap — **Sprint 6+: portfolio-модули** (process investigator, compliance,
-MCP deep research, computer-use QA, synthetic eval gen, incident response) либо полировка MVP /
-Phase 4 QA. Детали → [[phases-and-sprints]].
+**Phase 4 — QA: done (2026-06-13).** Functional e2e journey-тест, eval-регрессия (CI gate),
+security-review + adversarial SQL-suite (нашёл и починил 2 бага в SQL-guard) + хардненинг
+(`docs/security.md`), UX (`docs/demo.md`, `make seed`, README). 137 тестов, lint чистый.
+**MVP готов и захардненен.** Риски в [[risk-register]] помечены митигированными.
+Следующий шаг по roadmap — **Phase 5 Launch** (публичный релиз, demo-видео) либо **Sprint 6+**
+(portfolio-модули: process-investigator, compliance, mcp-deep-research, computer-use-QA,
+synthetic-eval-gen, incident-response). Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн

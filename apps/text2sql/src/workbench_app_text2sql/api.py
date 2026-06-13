@@ -16,7 +16,7 @@ router = APIRouter(prefix="/v1/apps/text2sql", tags=["text2sql"])
 
 
 class AskRequest(BaseModel):
-    question: str = Field(min_length=1)
+    question: str = Field(min_length=1, max_length=4000)  # bound LLM token cost
 
 
 class SqlCall(BaseModel):
