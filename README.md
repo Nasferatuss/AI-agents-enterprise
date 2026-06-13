@@ -4,8 +4,8 @@ Service-oriented platform for building, evaluating, and operating production-gra
 One core, ten demo apps — every module demonstrates the full engineering loop:
 **context → tools → reasoning → action → eval → trace → governance → demo.**
 
-> Status: **MVP complete** — service-oriented core + 4 MVP modules, hardened (Phase 4 QA).
-> Roadmap: MVP → Portfolio (10 modules) → Showcase.
+> Status: **Portfolio complete** — service-oriented core + all 10 demo modules, hardened (Phase 4 QA).
+> Roadmap: MVP → **Portfolio (10 modules)** → Showcase.
 
 ## What's built
 
@@ -17,11 +17,17 @@ metrics, citation accuracy, LLM judges, synthetic QA), a predictable **workflow 
 (state machine + human-in-the-loop approval gates), and an **observability layer** (a trace
 for every run).
 
-**MVP modules:**
+**Modules (10):**
 1. **Workflow Orchestrator** — predictable workflows with approval gates & audit log → `/workflows`
 2. **Text-to-SQL BI Agent** — question → guarded read-only SQL → result → explanation → `/text2sql`
 3. **RAG Evaluation Lab** — RAG pipeline + strict retrieval/answer evals
 4. **Observability Console** — cost, latency, failure taxonomy for every run → `/observability`
+5. **Business Process Investigator** — spec → entities, process map, contradictions, backlog → `/process`
+6. **Compliance & Risk Reviewer** — PII + policy rules + a deterministic risk score → `/compliance`
+7. **Deep Research Agent** — plan → research via a governed Tool Gateway → cited report → `/research`
+8. **Guarded Computer-Use QA** — agent drives a legacy UI sandbox, reports bugs → `/qa`
+9. **Synthetic Eval Generator** — corpus → eval dataset (standard/negative/multi-hop) + benchmark card
+10. **Incident Response Agent** — failed traces → root-cause classification → RCA report → `/incidents`
 
 ## Architecture
 

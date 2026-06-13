@@ -1,8 +1,8 @@
 ---
 type: module
-status: draft
+status: active
 sources: ["Дорожная карта.pdf"]
-updated: 2026-06-07
+updated: 2026-06-13
 ---
 
 # Synthetic Eval Generator
@@ -12,8 +12,14 @@ updated: 2026-06-07
 **Что делает:** из корпуса документов генерирует eval dataset — вопросы, эталонные
 ответы, negative cases, multi-hop cases.
 
-**Sprint 9 (1 нед):** Synthetic Eval Generator.
-**DoD:** из корпуса документов создаётся eval dataset.
+**Sprint 9 (1 нед):** Synthetic Eval Generator. ✅ done 2026-06-13: `platform/evals/generator.py`
+(`generate_eval_dataset`) расширяет базовую генерацию тремя типами кейсов: **standard**
+(answerable + reference answer), **negative** (off-corpus → система обязана отказать; relevant_sources
+пустые → метрика refusal accuracy), **multihop** (нужны два источника). Плюс **benchmark card** —
+калибровочный артефакт (состав по типам, source coverage, generating model + note про human-
+calibration) — прямо митигирует риск «датасет недостоверен». API `POST /v1/evals/generate`.
+Скармливается в eval runner → замыкает цикл с [[rag-evaluation-lab]].
+**DoD выполнен.**
 **Стек:** LLM API/local LLM, Pydantic.
 
 **Риск:** датасет может быть недостоверным → human calibration subset, negative cases,

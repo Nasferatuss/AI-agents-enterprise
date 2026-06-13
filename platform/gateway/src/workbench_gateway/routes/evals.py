@@ -3,7 +3,15 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, model_validator
 
-from workbench_evals import EvalDataset, EvalReport, generate_dataset, run_rag_eval
+from workbench_evals import (
+    EvalDataset,
+    EvalReport,
+    SyntheticDataset,
+    generate_dataset,
+    generate_eval_dataset,
+    run_rag_eval,
+)
+from workbench_evals.generator import GenerationError
 from workbench_evals.synthetic import SyntheticGenerationError
 from workbench_evals.tracing import record_eval_report
 from workbench_gateway.routes import rag as rag_routes
@@ -51,3 +59,30 @@ async def run_rag(req: RagEvalRequest) -> EvalReport:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     await record_eval_report(report)
     return report
+
+
+class GenerateRequest(BaseModel):
+    index: str
+    n_standard: int = Field(default=4, ge=0, le=50)
+    n_negative: int = Field(default=2, ge=0, le=50)
+    n_multihop: int = Field(default=2, ge=0, le=50)
+
+
+@router.post("/generate", response_model=SyntheticDataset)
+async def generate(req: GenerateRequest) -> SyntheticDataset:
+    pipeline = rag_routes.get_pipeline(req.index)
+    if not await pipeline.store.exists():
+        raise HTTPException(status_code=404, detail=f"unknown index: {req.index}")
+    try:
+        return await generate_eval_dataset(
+            pipeline,
+            get_router(),
+            name=f"synthetic-{req.index}",
+            n_standard=req.n_standard,
+            n_negative=req.n_negative,
+            n_multihop=req.n_multihop,
+        )
+    except NoProviderAvailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except GenerationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

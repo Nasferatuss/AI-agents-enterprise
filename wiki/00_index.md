@@ -80,8 +80,8 @@ audit); scenario runner → bug report. Страница `/qa`. v0 = вирту�
 | 6 | [[compliance-risk-reviewer]] | active | |
 | 7 | [[mcp-deep-research-agent]] | active | |
 | 8 | [[guarded-computer-use-qa-agent]] | active | |
-| 9 | [[synthetic-eval-generator]] | draft | |
-| 10 | [[incident-response-agent]] | draft | |
+| 9 | [[synthetic-eval-generator]] | active | |
+| 10 | [[incident-response-agent]] | active | |
 
 ## Сквозные концепции
 [[rag]] · [[evals]] · [[observability]] · [[governance]] · [[mcp-tool-use]] · [[context-engineering]] · [[computer-use]]

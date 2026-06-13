@@ -72,6 +72,33 @@ _SAMPLES = [
         error="max_steps_reached",
         payload={"note": "agent looped on an ambiguous question"},
     ),
+    # synthetic failed traces for the Incident Response demo (one per failure mode)
+    dict(
+        kind="agent",
+        name="text2sql",
+        status="failed",
+        latency_ms=600,
+        num_steps=1,
+        error="execution failed: no such column: revnue",
+        payload={"note": "model referenced a misspelled column"},
+    ),
+    dict(
+        kind="agent",
+        name="deep_research",
+        status="failed",
+        latency_ms=200,
+        error="no provider succeeded for complexity=complex; tried: none",
+        payload={"note": "no model provider available"},
+    ),
+    dict(
+        kind="eval",
+        name="synthetic-stale",
+        status="failed",
+        cost_usd=0.01,
+        num_steps=6,
+        error="low retrieval quality",
+        payload={"aggregates": {"hit_rate": 0.33, "faithfulness": 0.4}},
+    ),
 ]
 
 
