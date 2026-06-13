@@ -1,7 +1,7 @@
 ---
 type: index
 sources: ["Дорожная карта.pdf"]
-updated: 2026-06-10
+updated: 2026-06-13
 ---
 
 # Enterprise AI Agent Workbench — Index
@@ -105,8 +105,17 @@ audit); scenario runner → bug report. Страница `/qa`. v0 = вирту�
 
 ## Источники
 - `sources/Дорожная карта.pdf` — полный roadmap проекта (24 стр.)
-  Внешние ссылки из источника: [OpenAI — Practical guide to building AI agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/),
-  [OpenAI — Evals](https://developers.openai.com/api/docs/guides/evals),
-  [OpenAI — Computer use](https://developers.openai.com/api/docs/guides/tools-computer-use),
-  [Anthropic — MCP](https://www.anthropic.com/news/model-context-protocol),
-  [Anthropic — Building effective agents](https://www.anthropic.com/research/building-effective-agents).
+- Внешние ссылки из источника — **интегрированы в вики (2026-06-13):**
+  - [OpenAI — A practical guide to building agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
+    → интегрировано в [[mcp-tool-use]] (tools, single/multi-agent), [[context-engineering]]
+    (model/instructions foundations), [[governance]] (guardrails).
+    *Прим.: HTML 403, текст взят из официального PDF (cdn.openai.com).*
+  - [OpenAI — Evals](https://developers.openai.com/api/docs/guides/evals) + Graders
+    → интегрировано в [[evals]] (структура eval, типы graders).
+  - [OpenAI — Computer use](https://developers.openai.com/api/docs/guides/tools-computer-use)
+    → интегрировано в [[computer-use]] (5-шаговый цикл, action types, safety; отмечено противоречие).
+  - [Anthropic — Model Context Protocol](https://www.anthropic.com/news/model-context-protocol)
+    → интегрировано в [[mcp-tool-use]] (open standard, client/server, что выпущено).
+  - [Anthropic — Building effective agents](https://www.anthropic.com/research/building-effective-agents)
+    → интегрировано в [[mcp-tool-use]] (workflows vs agents, 5 паттернов) и [[context-engineering]]
+    (augmented LLM, keep it simple).

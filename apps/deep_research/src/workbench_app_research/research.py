@@ -64,7 +64,16 @@ def _add_cost(total: float | None, part: float | None) -> float | None:
     return None if (total is None or part is None) else total + part
 
 
-async def run_research(router: ModelRouter, gateway: ToolGateway, question: str) -> ResearchReport:
+async def run_research(
+    router: ModelRouter,
+    gateway: ToolGateway,
+    question: str,
+    *,
+    allowlist: set[str] | None = None,
+) -> ResearchReport:
+    # `allowlist` lets callers override the tools this run may use (e.g. when the
+    # gateway is backed by a live MCP server). Default keeps the built-in set.
+    allowlist = allowlist if allowlist is not None else _ALLOWLIST
     cost: float | None = 0.0
 
     # 1. plan
@@ -81,12 +90,12 @@ async def run_research(router: ModelRouter, gateway: ToolGateway, question: str)
     sources: list[Source] = []
     seen: set[str] = set()
     for sq in sub_questions:
-        search = await gateway.call("web_search", {"query": sq}, allowlist=_ALLOWLIST)
+        search = await gateway.call("web_search", {"query": sq}, allowlist=allowlist)
         for hit in (search.output or [])[:2]:
             url = hit.get("url")
             if not url or url in seen:
                 continue
-            fetched = await gateway.call("fetch", {"url": url}, allowlist=_ALLOWLIST)
+            fetched = await gateway.call("fetch", {"url": url}, allowlist=allowlist)
             if fetched.allowed and not fetched.error and fetched.output:
                 seen.add(url)
                 sources.append(Source(n=len(sources) + 1, url=url, title=fetched.output["title"]))

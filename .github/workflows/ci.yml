@@ -24,6 +24,22 @@ jobs:
       - name: Tests (incl. eval regression + SQL injection suite)
         run: uv run pytest -q
 
+  playwright:
+    name: computer-use e2e (real browser)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Sync workspace
+        run: uv sync --frozen
+      - name: Install chromium
+        run: uv run playwright install --with-deps chromium
+      - name: Computer-use QA scenarios in a real browser
+        run: uv run pytest -m playwright -q
+
   ui:
     name: ui build
     runs-on: ubuntu-latest

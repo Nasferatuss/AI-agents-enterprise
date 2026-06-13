@@ -49,7 +49,10 @@ approve/reject when configured.
 - **API keys** are read from env at call time and never logged; the trace-store
   URL is logged with credentials stripped.
 - **Outbound request targets** (providers, Ollama, Qdrant) come only from `WB_*`
-  settings, never from request data — no user-controlled SSRF.
+  settings, never from request data — no user-controlled SSRF. The optional MCP
+  server (`WB_MCP_SERVER_COMMAND`) is likewise a config-controlled command, not
+  request-derived; tools it exposes are registered behind the **same gateway
+  allowlist + audit log** (ADR-005) as the in-process connectors.
 - **Trace payloads** scrub raw DB rows from `run_sql` results (keep sql/columns/
   row_count) so traces don't duplicate sensitive query data.
 - **Trace queries** use SQLAlchemy bound parameters — no SQL injection.

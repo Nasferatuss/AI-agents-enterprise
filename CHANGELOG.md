@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased — Production hardening
+
+Moving the demo-grade seams to real backends, plus the deploy-gating controls.
+
+- **Real MCP client + server** (ADR-005) — the Tool Gateway can now source its
+  tools from a real MCP server over stdio JSON-RPC instead of the in-process
+  corpus. Ships both sides: a `FastMCP` server (`mcp_server.py`) re-exposing the
+  research corpus, and a stdio `ClientSession` client that registers a server's
+  tools under the same allowlist + audit boundary. Opt-in via
+  `WB_MCP_SERVER_COMMAND`; off by default (corpus connectors). New
+  `GET /v1/apps/research/mcp/tools` lists the live server tools.
+- **Real Playwright computer-use** — the Guarded Computer-Use QA module drives a
+  real headless chromium over a bundled `legacy_ui.html` behind the *same*
+  observe/click/type gateway interface; the same two planted bugs surface through
+  a real browser. Browser e2e runs in a dedicated CI job (`pytest -m playwright`,
+  `make e2e`); deselected by default so `make test` needs no chromium.
+- **Alembic migrations** for the trace store (`make migrate`); `init_db`
+  auto-creates only on sqlite (dev/tests), Postgres schema is Alembic-owned.
+- **Optional gateway auth & rate limiting** — `WB_API_KEY` gates `/v1/*`,
+  `WB_RATE_LIMIT_PER_MIN` caps POSTs per client IP; both off by default.
+- **Wiki** — the 5 external OpenAI/Anthropic sources referenced by the roadmap
+  are now ingested into the concept pages with provenance and one flagged
+  contradiction (`wiki/concepts/`).
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

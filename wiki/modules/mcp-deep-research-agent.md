@@ -30,7 +30,16 @@ research report с источниками и trace.
 
 **DoD выполнен:** агент проходит через 2–3 инструмента через единый gateway; делает research
 report с источниками и trace (audit log).
-**Стек:** MCP SDK / JSON-RPC contracts, Agent Runtime, RAG, опц. web/search.
+
+**Real MCP (hardening, 2026-06-13):** теперь это не только MCP-style connectors —
+есть **настоящий MCP client + server**. `mcp_server.py` (`FastMCP`) переотдаёт
+corpus-инструменты по stdio JSON-RPC; `mcp_client.py` (stdio `ClientSession`)
+коннектится к любому MCP-серверу, перечисляет его tools и регистрирует их в том же
+gateway — под тем же **allowlist + audit** boundary. Opt-in через `WB_MCP_SERVER_COMMAND`
+(пусто = in-process corpus, поведение по умолчанию). `GET /v1/apps/research/mcp/tools`
+отдаёт live-список инструментов сервера. Round-trip покрыт тестами (bundled server
+поднимается из самого процесса — без сети, CI-safe).
+**Стек:** официальный MCP SDK (`mcp`), JSON-RPC over stdio, Agent Runtime, RAG, опц. web/search.
 
 > MCP — слой стандартизации подключений к данным и tools, но проектировать с
 > **security boundary**, allowlist и audit log: connectivity увеличивает поверхность риска.

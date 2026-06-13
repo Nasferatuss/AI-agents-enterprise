@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install api test lint fmt qa eval-regression seed migrate up down ps logs ui ui-build
+.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up down ps logs ui ui-build
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -26,6 +26,10 @@ qa: ## Full QA gate: lint + tests (incl. eval regression + SQL injection suite)
 
 eval-regression: ## Run the retrieval regression gate only
 	uv run pytest tests/test_eval_regression.py -q
+
+e2e: ## Run the real-browser computer-use QA (installs chromium if needed)
+	uv run playwright install chromium
+	uv run pytest -m playwright -q
 
 seed: ## Seed the trace store with sample runs (for the observability demo)
 	uv run python scripts/seed_demo.py

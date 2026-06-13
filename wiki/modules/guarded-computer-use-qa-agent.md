@@ -28,8 +28,16 @@ Playwright/произвольных действий). Scenario-runner прог�
 screen}`, `POST /v1/apps/cua/run`, UI `/qa` (рендер legacy-формы + bug report).
 
 **DoD выполнен:** агент проходит 2–3 сценария, есть bug report (+ action trace).
-**v0-замечание:** виртуальный UI вместо реального Playwright/vision — но за тем же action-
-интерфейсом; production-версия подставляет Playwright+vision-модель без смены контракта.
+
+**Real Playwright (hardening, 2026-06-13):** виртуальный state machine больше не
+единственный backend. `playwright_sandbox.py` водит **настоящий headless chromium**
+по bundled `legacy_ui.html` за тем же контрактом `observe/click/type`, возвращая те же
+`Screen`/`Element` объекты; `run_qa_playwright()` прогоняет те же сценарии через тот же
+generic `_run_scenario` — оба заложенных бага находятся **через реальный браузер**.
+Виртуальный UI остаётся быстрым default'ом (детерминирован, без браузера); browser-e2e
+вынесен в отдельный CI-job (`pytest -m playwright`, `make e2e`) и deselect'ится по умолчанию,
+поэтому `make test` не требует chromium. Контракт не поменялся — ровно та подстановка
+«Playwright за тем же action-интерфейсом», что закладывалась в v0.
 
 **Риск:** нестабильность агента (high) → controlled legacy UI sandbox, Playwright traces,
 retries. См. [[risk-register]].

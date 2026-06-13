@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     # point this at a sandbox DB with a read-only user.
     bi_database_url: str = "sqlite:///examples/bi/retail.db"
 
+    # Tool Gateway MCP client (ADR-005). When set to a shell-style command
+    # (e.g. "python -m workbench_toolgateway.mcp_server" or "uvx mcp-server-fetch"),
+    # the deep-research agent sources its tools from a real MCP server over stdio
+    # instead of the in-process corpus connectors. Empty = current behavior.
+    mcp_server_command: str = ""
+
     # Observability trace store (Sprint 5, ADR-006). Defaults to a local sqlite
     # file so traces work without Docker; `make up` overrides this to Postgres
     # (postgresql+asyncpg://…). Always an async SQLAlchemy URL.

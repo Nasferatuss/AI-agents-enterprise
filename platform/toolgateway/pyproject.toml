@@ -5,6 +5,7 @@ description = "MCP / Tool Gateway — tool registry, permission allowlist, audit
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.10",
+    "mcp>=1.2",
     "workbench-shared",
 ]
 

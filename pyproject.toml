@@ -57,4 +57,8 @@ select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# Real-browser Playwright e2e is opt-in: deselected by default (keeps `make test`
+# green without a chromium binary); the dedicated CI job runs `pytest -m playwright`.
+markers = ["playwright: real-browser e2e via Playwright/chromium (run with -m playwright)"]
+addopts = "-m 'not playwright'"
 testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "platform/observability/tests", "apps/text2sql/tests", "apps/process_investigator/tests", "apps/compliance_reviewer/tests", "platform/toolgateway/tests", "apps/deep_research/tests", "apps/computer_use_qa/tests", "apps/incident_response/tests", "tests"]

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Legacy CRM</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        max-width: 420px;
+      }
+      .screen {
+        display: none;
+      }
+      .screen.active {
+        display: block;
+      }
+      label {
+        display: block;
+        margin: 0.5rem 0 0.25rem;
+      }
+      input {
+        width: 100%;
+        padding: 0.4rem;
+        box-sizing: border-box;
+      }
+      button {
+        margin: 0.75rem 0.5rem 0 0;
+        padding: 0.4rem 0.9rem;
+      }
+      #error {
+        color: #b00020;
+        margin-top: 0.75rem;
+        min-height: 1.2em;
+      }
+      #error:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- The single visible container carries data-state for the observer. -->
+    <main id="app" data-state="login">
+      <!-- Login screen -->
+      <section id="screen-login" class="screen active">
+        <h1>Sign in</h1>
+        <label for="username">Username</label>
+        <input id="username" type="text" />
+        <label for="password">Password</label>
+        <input id="password" type="password" />
+        <button id="submit" type="button">Sign in</button>
+      </section>
+
+      <!-- Dashboard screen -->
+      <section id="screen-dashboard" class="screen">
+        <p id="greeting"></p>
+        <button id="new_customer" type="button">New customer</button>
+        <button id="logout" type="button">Log out</button>
+      </section>
+
+      <!-- Customer form screen -->
+      <section id="screen-customer_form" class="screen">
+        <h1>New customer</h1>
+        <label for="name">Name</label>
+        <input id="name" type="text" />
+        <label for="email">Email</label>
+        <input id="email" type="text" />
+        <button id="save" type="button">Save</button>
+        <button id="cancel" type="button">Cancel</button>
+      </section>
+
+      <!-- Success screen -->
+      <section id="screen-success" class="screen">
+        <p id="confirmation">Customer saved</p>
+        <button id="back" type="button">Back to dashboard</button>
+      </section>
+
+      <!-- Uniform error element, shared across screens. Empty = no error. -->
+      <p id="error"></p>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var VALID_USER = "admin";
+        var VALID_PASS = "secret";
+
+        var app = document.getElementById("app");
+        var errorEl = document.getElementById("error");
+        var greetingEl = document.getElementById("greeting");
+
+        function show(state) {
+          var screens = document.querySelectorAll(".screen");
+          for (var i = 0; i < screens.length; i++) {
+            screens[i].classList.remove("active");
+          }
+          document.getElementById("screen-" + state).classList.add("active");
+          app.setAttribute("data-state", state);
+        }
+
+        function setError(msg) {
+          errorEl.textContent = msg || "";
+        }
+
+        function goLogin() {
+          show("login");
+          setError("");
+        }
+
+        function goDashboard() {
+          var user = document.getElementById("username").value;
+          // BUG-2: "Welcom" typo (should be "Welcome"). Kept on purpose.
+          greetingEl.textContent = "Welcom, " + user;
+          show("dashboard");
+          setError("");
+        }
+
+        function goCustomerForm() {
+          document.getElementById("name").value = "";
+          document.getElementById("email").value = "";
+          show("customer_form");
+          setError("");
+        }
+
+        function goSuccess() {
+          show("success");
+          setError("");
+        }
+
+        document.getElementById("submit").addEventListener("click", function () {
+          var user = document.getElementById("username").value;
+          var pass = document.getElementById("password").value;
+          if (user === VALID_USER && pass === VALID_PASS) {
+            goDashboard();
+          } else {
+            setError("Invalid credentials");
+          }
+        });
+
+        document
+          .getElementById("new_customer")
+          .addEventListener("click", goCustomerForm);
+
+        document.getElementById("logout").addEventListener("click", goLogin);
+
+        document.getElementById("save").addEventListener("click", function () {
+          var name = document.getElementById("name").value;
+          if (!name.trim()) {
+            setError("Name is required");
+            return;
+          }
+          // BUG-1: email is NOT validated — invalid email is accepted. Kept on purpose.
+          goSuccess();
+        });
+
+        document
+          .getElementById("cancel")
+          .addEventListener("click", function () {
+            goDashboard();
+          });
+
+        document.getElementById("back").addEventListener("click", function () {
+          goDashboard();
+        });
+      })();
+    </script>
+  </body>
+</html>

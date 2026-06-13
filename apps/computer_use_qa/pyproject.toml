@@ -5,6 +5,7 @@ description = "Guarded Computer-Use QA (module #8) — legacy UI sandbox + scena
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "playwright>=1.40",
     "workbench-shared",
     "workbench-runtime",
     "workbench-toolgateway",
@@ -21,3 +22,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/workbench_app_cua"]
+
+# Ship the legacy CRM page as package data (the Playwright sandbox loads it via file://).
+[tool.hatch.build.targets.wheel.force-include]
+"src/workbench_app_cua/legacy_ui.html" = "workbench_app_cua/legacy_ui.html"

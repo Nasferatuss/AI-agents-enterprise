@@ -1,5 +1,6 @@
 """Deep Research Agent endpoints (mounted by the gateway)."""
 
+import shlex
 import time
 
 from fastapi import APIRouter, HTTPException
@@ -9,7 +10,9 @@ from workbench_app_research.research import ResearchReport, run_research
 from workbench_observability import safe_record
 from workbench_runtime import get_router
 from workbench_runtime.router import NoProviderAvailableError
-from workbench_toolgateway import ToolSpec, build_default_gateway
+from workbench_shared.config import get_settings
+from workbench_toolgateway import ToolGateway, ToolSpec, build_default_gateway
+from workbench_toolgateway.mcp_client import mcp_session, register_mcp_tools
 
 router = APIRouter(prefix="/v1/apps/research", tags=["deep-research"])
 
@@ -24,12 +27,40 @@ async def tools() -> list[ToolSpec]:
     return build_default_gateway().list_tools()
 
 
+@router.get("/mcp/tools", response_model=list[ToolSpec])
+async def mcp_tools() -> list[ToolSpec]:
+    """Live tool list sourced from the configured MCP server.
+
+    When ``WB_MCP_SERVER_COMMAND`` is set, connect over stdio and return the
+    server's advertised tools. When unset, returns ``[]`` (no MCP server wired).
+    """
+    command = get_settings().mcp_server_command.strip()
+    if not command:
+        return []
+    cmd, *args = shlex.split(command)
+    gateway = ToolGateway()
+    async with mcp_session(cmd, args) as session:
+        await register_mcp_tools(gateway, session)
+        return gateway.list_tools()
+
+
 @router.post("", response_model=ResearchReport)
 async def research(req: ResearchRequest) -> ResearchReport:
     started = time.monotonic()
-    gateway = build_default_gateway()  # fresh per request → clean audit log
+    command = get_settings().mcp_server_command.strip()
     try:
-        report = await run_research(get_router(), gateway, req.question)
+        if command:
+            # Source tools from a real MCP server over stdio (opt-in).
+            cmd, *args = shlex.split(command)
+            gateway = ToolGateway()  # fresh per request → clean audit log
+            async with mcp_session(cmd, args) as session:
+                names = await register_mcp_tools(gateway, session)
+                report = await run_research(
+                    get_router(), gateway, req.question, allowlist=set(names)
+                )
+        else:
+            gateway = build_default_gateway()  # fresh per request → clean audit log
+            report = await run_research(get_router(), gateway, req.question)
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     await safe_record(
