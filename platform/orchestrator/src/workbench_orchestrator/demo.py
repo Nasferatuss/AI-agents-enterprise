@@ -113,3 +113,63 @@ CONTENT_BRIEF = register(
         ],
     )
 )
+
+
+# --- access_request: human-in-the-loop demo (Sprint 4.1) ---
+# The risky action (granting access) sits behind an approval gate. The engine
+# suspends before `grant` runs, so nothing is granted until a human approves —
+# and the LLM risk assessment is in run state for the reviewer to read.
+
+
+async def validate_access(state: dict) -> dict:
+    resource = str(state.get("resource", "")).strip()
+    requester = str(state.get("requester", "")).strip()
+    if not resource or not requester:
+        raise ValueError("input must contain non-empty 'resource' and 'requester'")
+    return {"resource": resource, "requester": requester}
+
+
+async def assess_access(state: dict) -> dict:
+    completion = await get_router().complete(
+        [
+            ChatMessage(
+                role="user",
+                content=(
+                    f"In one sentence, summarize the security risk of granting "
+                    f"'{state['requester']}' access to '{state['resource']}'."
+                ),
+            )
+        ],
+        complexity="standard",
+        max_tokens=256,
+    )
+    return {"risk_assessment": completion.text}
+
+
+async def grant_access(state: dict) -> dict:
+    return {
+        "granted": True,
+        "grant_note": f"Access to '{state['resource']}' granted to '{state['requester']}'.",
+    }
+
+
+ACCESS_REQUEST = register(
+    WorkflowDef(
+        name="access_request",
+        description="Validate → assess risk → HUMAN APPROVAL → grant access",
+        steps=[
+            Step(name="validate", run=validate_access, next="assess"),
+            Step(name="assess", run=assess_access, next="grant", max_attempts=2),
+            Step(
+                name="grant",
+                run=grant_access,
+                next=None,
+                requires_approval=True,
+                approval_prompt=(
+                    "Approve granting this access? Review `risk_assessment` in the run "
+                    "state before deciding."
+                ),
+            ),
+        ],
+    )
+)

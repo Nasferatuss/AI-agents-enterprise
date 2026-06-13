@@ -26,8 +26,17 @@ state machine по [[adr-007-predictable-orchestration]]:
   шагов (draft=standard, review=judge-tier), граф снаружи.
 - **API**: `GET /v1/workflows`, `POST /v1/workflows/{name}/run`, `GET /v1/workflows/runs[/{id}]`.
 
-**Sprint 4.1:** Human-in-the-loop — approval gate перед risky action; UI показывает
-pending approval и audit log → [[governance]]. — next
+**Sprint 4.1:** Human-in-the-loop ✅ done 2026-06-13: approval gate как свойство шага
+(`requires_approval`) — движок **приостанавливается ДО** выполнения gated-шага
+(`awaiting_approval`, ничего рискованного ещё не произошло); human делает approve
+(run продолжается, gated-шаг выполняется) или reject (run → `rejected`, шаг не запускается).
+Каждое решение пишется в `run.approvals` (actor, decision, reason, timestamp) — audit log →
+[[governance]]. Движок стал resumable (`execute` + `resume`). Demo-workflow `access_request`
+(validate → assess-risk через LLM → **gate** → grant): рискованное действие за человеческим
+approval, risk assessment виден ревьюеру. API: `POST /v1/workflows/runs/{id}/{approve,reject}`.
+UI-страница `/workflows`: запуск, pending-approval с risk assessment + кнопки approve/reject,
+audit log, step trace. **DoD модуля №1 выполнен**: workflow из 3–5 шагов выполняется,
+pending-approval и audit видны в UI.
 
 **DoD:** workflow из 3–5 шагов выполняется; pending-approval и audit видны в UI.
 **Стек:** LangGraph / custom state machine, FastAPI, Next.js, PostgreSQL.

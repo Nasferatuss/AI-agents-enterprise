@@ -42,13 +42,14 @@ GPU-машина = inference (инструкция: `docs/setup.md`).
 **Sprint 3 + 3.1 — Text-to-SQL Agent + BI UI: done (2026-06-12).** `apps/text2sql`
 (sqlglot-гарды по [[adr-004-readonly-sql-safety]], schema-aware агент, API) + страница
 `/text2sql` в demo console. **DoD модуля №2 выполнен** → [[text-to-sql-rag-agent]].
-**Sprint 4 — Workflow Orchestrator v0: done (2026-06-13).** `platform/orchestrator` —
-предсказуемая state machine ([[adr-007-predictable-orchestration]]): steps/transitions/retries/
-branching, step-budget, каждый шаг в `WorkflowRun`-трейсе; demo-workflow `content_brief`
-(draft → judge-review → revise-loop) поверх [[adr-008-model-router-design]]; API `/v1/workflows/*`
-→ [[enterprise-workflow-orchestrator]] (status: active). **Все 3 MVP-модуля + ядро готовы по v0.**
-Следующий шаг: **Sprint 4.1 — Human-in-the-loop approval** ([[governance]]) либо
-Sprint 5 — Trace Logging + Observability UI. Детали → [[phases-and-sprints]].
+**Sprint 4 + 4.1 — Workflow Orchestrator v0 + Human-in-the-loop: done (2026-06-13).**
+`platform/orchestrator` — предсказуемая resumable state machine ([[adr-007-predictable-orchestration]]):
+steps/transitions/retries/branching + **approval gate** (pause ДО risky action → approve/reject →
+audit log, первый [[governance]]-механизм). Demo `content_brief` и `access_request` (с gate),
+страница `/workflows` в UI (pending-approval + audit). **Все 3 MVP-модуля + ядро готовы по v0;
+DoD модуля-оркестратора выполнен** → [[enterprise-workflow-orchestrator]].
+Следующий шаг: **Sprint 5 — Trace Logging + Observability UI** ([[agent-observability-console]]:
+persist накопленных AgentRun/WorkflowRun/EvalReport в Postgres + UI). Детали → [[phases-and-sprints]].
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн

@@ -23,5 +23,13 @@ McKinsey (2026) выделяет agentic AI trust, governance и risk controls �
 compliance, blocked unsafe tool calls → [[kpi-and-metrics]].
 QA: Security & Governance QA, incl. prompt injection cases → [[phases-and-sprints]].
 
+## Реализовано (частично)
+
+**Approval gates + audit (Sprint 4.1, 2026-06-13)** — первый governance-механизм в коде:
+human-in-the-loop approval перед risky action в [[enterprise-workflow-orchestrator]]
+(`requires_approval` на шаге → pause → approve/reject → `run.approvals` audit log).
+Полный Policy/Governance Engine (allowlist tools, PII checks, approval policies на уровне
+платформы) — отдельный слой, Design 6 / позже.
+
 ## Sources
 - `Дорожная карта.pdf` стр. 1, 3, 9, 13, 15, 20–22.

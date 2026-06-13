@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from workbench_orchestrator import registry
+from workbench_orchestrator.engine import ApprovalError
 from workbench_orchestrator.types import WorkflowInfo, WorkflowRun
 from workbench_runtime.router import NoProviderAvailableError
 
@@ -14,10 +15,20 @@ class RunRequest(BaseModel):
     input: dict = Field(default_factory=dict)
 
 
+class ApprovalRequest(BaseModel):
+    actor: str = Field(min_length=1)  # who is approving/rejecting (audit)
+    reason: str | None = None
+
+
 @router.get("", response_model=list[WorkflowInfo])
 async def list_workflows() -> list[WorkflowInfo]:
     return [
-        WorkflowInfo(name=wf.name, description=wf.description, steps=[s.name for s in wf.steps])
+        WorkflowInfo(
+            name=wf.name,
+            description=wf.description,
+            steps=[s.name for s in wf.steps],
+            approval_gates=wf.approval_gates,
+        )
         for wf in registry.WORKFLOWS.values()
     ]
 
@@ -43,3 +54,26 @@ async def run(name: str, req: RunRequest) -> WorkflowRun:
         return await registry.run_workflow(name, req.input)
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+async def _decide(run_id: str, decision, req: ApprovalRequest) -> WorkflowRun:
+    try:
+        return await registry.resume_run(
+            run_id, decision=decision, actor=req.actor, reason=req.reason
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"unknown run: {run_id}") from exc
+    except ApprovalError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except NoProviderAvailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.post("/runs/{run_id}/approve", response_model=WorkflowRun)
+async def approve(run_id: str, req: ApprovalRequest) -> WorkflowRun:
+    return await _decide(run_id, "approved", req)
+
+
+@router.post("/runs/{run_id}/reject", response_model=WorkflowRun)
+async def reject(run_id: str, req: ApprovalRequest) -> WorkflowRun:
+    return await _decide(run_id, "rejected", req)

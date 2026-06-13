@@ -2,8 +2,8 @@
 
 from collections import OrderedDict
 
-from workbench_orchestrator.engine import WorkflowDef, execute
-from workbench_orchestrator.types import WorkflowRun
+from workbench_orchestrator.engine import WorkflowDef, execute, resume
+from workbench_orchestrator.types import ApprovalDecision, WorkflowRun
 
 _MAX_STORED_RUNS = 200
 
@@ -16,12 +16,26 @@ def register(workflow: WorkflowDef) -> WorkflowDef:
     return workflow
 
 
-async def run_workflow(name: str, input_state: dict) -> WorkflowRun:
-    run = await execute(WORKFLOWS[name], input_state)
+def _store(run: WorkflowRun) -> WorkflowRun:
     _RUNS[run.id] = run
     while len(_RUNS) > _MAX_STORED_RUNS:
         _RUNS.popitem(last=False)
     return run
+
+
+async def run_workflow(name: str, input_state: dict) -> WorkflowRun:
+    return _store(await execute(WORKFLOWS[name], input_state))
+
+
+async def resume_run(
+    run_id: str, *, decision: ApprovalDecision, actor: str, reason: str | None = None
+) -> WorkflowRun:
+    """Resume a paused run with an approval decision. Raises KeyError if unknown."""
+    run = _RUNS[run_id]
+    resumed = await resume(
+        WORKFLOWS[run.workflow], run, decision=decision, actor=actor, reason=reason
+    )
+    return _store(resumed)
 
 
 def get_run(run_id: str) -> WorkflowRun | None:

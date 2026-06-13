@@ -1,4 +1,4 @@
-"""Predictable workflow state machine (ADR-007).
+"""Predictable workflow state machine with human-in-the-loop gates (ADR-007).
 
 A workflow is an ordered set of named steps. Each step is an async function
 over the shared state dict; it returns updates to merge. Transitions are
@@ -6,6 +6,12 @@ explicit: `next` is a step name, a branch function over the state, or None
 (end). Retries are per-step with optional delay. A global step budget guards
 against branch cycles. No LLM decides the control flow — steps may call models
 (via the router), but the graph itself is deterministic and auditable.
+
+**Human-in-the-loop (Sprint 4.1).** A step marked `requires_approval` is a gate:
+the engine suspends *before* executing it, the run goes `awaiting_approval`, and
+nothing risky has happened yet. A human resumes with approve (run continues and
+executes the gate) or reject (run ends `rejected`, the gate never runs). Every
+decision is appended to `run.approvals` as an audit trail.
 
 v0 keeps runs in memory; Postgres persistence arrives with the trace layer
 (Sprint 5).
@@ -18,7 +24,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
-from workbench_orchestrator.types import StepAttempt, WorkflowRun
+from workbench_orchestrator.types import ApprovalDecision, ApprovalRecord, StepAttempt, WorkflowRun
 from workbench_shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -29,6 +35,10 @@ StepFn = Callable[[dict], Awaitable[dict]]
 NextFn = Callable[[dict], str | None]
 
 
+class ApprovalError(Exception):
+    """Resume attempted on a run that is not awaiting approval."""
+
+
 @dataclass(frozen=True)
 class Step:
     name: str
@@ -36,6 +46,8 @@ class Step:
     next: str | NextFn | None = None  # None → workflow ends after this step
     max_attempts: int = 1
     retry_delay_s: float = 0.0
+    requires_approval: bool = False  # gate: suspend for human approval before running
+    approval_prompt: str | None = None  # shown to the human at the gate
 
 
 @dataclass(frozen=True)
@@ -61,16 +73,59 @@ class WorkflowDef:
     def entry(self) -> str:
         return self.steps[0].name
 
+    @property
+    def approval_gates(self) -> list[str]:
+        return [s.name for s in self.steps if s.requires_approval]
+
+
+def _utc_now() -> str:
+    return datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+
 
 async def execute(workflow: WorkflowDef, input_state: dict) -> WorkflowRun:
     run = WorkflowRun(
         id=uuid.uuid4().hex[:12],
         workflow=workflow.name,
         status="running",
-        created_at=datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
+        created_at=_utc_now(),
         state=dict(input_state),
     )
-    current: str | None = workflow.entry
+    return await _drive(workflow, run, workflow.entry)
+
+
+async def resume(
+    workflow: WorkflowDef,
+    run: WorkflowRun,
+    *,
+    decision: ApprovalDecision,
+    actor: str,
+    reason: str | None = None,
+) -> WorkflowRun:
+    """Apply a human decision at the pending approval gate and continue (or end)."""
+    if run.status != "awaiting_approval" or run.pending_step is None:
+        raise ApprovalError(f"run {run.id} is not awaiting approval (status={run.status})")
+
+    gate = run.pending_step
+    run.approvals.append(
+        ApprovalRecord(
+            step=gate, decision=decision, actor=actor, reason=reason, decided_at=_utc_now()
+        )
+    )
+    run.pending_step = None
+    run.approval_prompt = None
+    log.info("workflow approval decision", run=run.id, step=gate, decision=decision, actor=actor)
+
+    if decision == "rejected":
+        run.status = "rejected"
+        run.error = f"step '{gate}' rejected by {actor}"
+        return run
+
+    run.status = "running"
+    return await _drive(workflow, run, gate)  # gate is now approved → it will execute
+
+
+async def _drive(workflow: WorkflowDef, run: WorkflowRun, current: str | None) -> WorkflowRun:
+    approved = {a.step for a in run.approvals if a.decision == "approved"}
 
     while current is not None:
         if run.steps_executed >= MAX_STEPS_PER_RUN:
@@ -78,8 +133,18 @@ async def execute(workflow: WorkflowDef, input_state: dict) -> WorkflowRun:
             run.error = f"step budget exceeded ({MAX_STEPS_PER_RUN}) — branch cycle?"
             break
         step = workflow.step(current)
-        run.steps_executed += 1
 
+        # Approval gate: suspend before executing the gated step (nothing risky yet).
+        if step.requires_approval and step.name not in approved:
+            run.status = "awaiting_approval"
+            run.pending_step = step.name
+            run.approval_prompt = step.approval_prompt or f"Approve step '{step.name}'?"
+            log.info(
+                "workflow awaiting approval", workflow=workflow.name, run=run.id, step=step.name
+            )
+            return run
+
+        run.steps_executed += 1
         succeeded = False
         for attempt in range(1, step.max_attempts + 1):
             started = time.monotonic()
