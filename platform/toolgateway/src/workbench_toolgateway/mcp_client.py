@@ -9,6 +9,8 @@ Uses the official Python SDK (`mcp`). The bundled `mcp_server` module re-exposes
 the corpus connectors over MCP, so the deep-research pipeline runs unchanged.
 """
 
+import asyncio
+import gc
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -27,13 +29,23 @@ log = get_logger(__name__)
 async def mcp_session(command: str, args: list[str]) -> AsyncIterator[ClientSession]:
     """Open an MCP stdio session against `command args`, yield an initialized session."""
     params = StdioServerParameters(command=command, args=args)
-    async with (
-        stdio_client(params) as (read, write),
-        ClientSession(read, write) as session,
-    ):
-        await session.initialize()
-        log.info("mcp session initialized", command=command, args=args)
-        yield session
+    try:
+        async with (
+            stdio_client(params) as (read, write),
+            ClientSession(read, write) as session,
+        ):
+            await session.initialize()
+            log.info("mcp session initialized", command=command, args=args)
+            yield session
+    finally:
+        # The stdio server runs as a subprocess. Once the context managers above
+        # exit the process is terminated, but its asyncio transport is otherwise
+        # finalized by GC — which, if that happens after the event loop closes,
+        # prints a spurious "Event loop is closed" from the transport's __del__
+        # (seen on Linux/CI). Yield a tick so anyio's pending close callbacks run,
+        # then finalize the now-unreachable transport while the loop is still live.
+        await asyncio.sleep(0)
+        gc.collect()
 
 
 def _extract_result(result: object) -> object:

@@ -152,6 +152,47 @@ curl -s -X POST localhost:8000/v1/agents/demo/run -H 'Content-Type: application/
 
 ---
 
+## Часть 4 (опционально). Реальный MCP-сервер и Playwright e2e
+
+Обе фичи выключены по умолчанию — демо работает без них. Включаются по желанию.
+
+### 4.1. Реальный MCP-сервер для Deep Research
+
+По умолчанию Deep Research использует in-process corpus-коннекторы. Чтобы взять
+инструменты с **настоящего MCP-сервера** по stdio (тот же allowlist + audit), задай
+в `.env` команду его запуска:
+
+```dotenv
+# вариант A: bundled-сервер проекта (переотдаёт тот же corpus по реальному MCP)
+WB_MCP_SERVER_COMMAND=python -m workbench_toolgateway.mcp_server
+# вариант B: сторонний MCP-сервer, напр. fetch (нужен установленный uvx)
+# WB_MCP_SERVER_COMMAND=uvx mcp-server-fetch
+```
+
+Проверка — какие инструменты отдаёт живой сервер:
+```bash
+curl -s localhost:8000/v1/apps/research/mcp/tools | python3 -m json.tool
+```
+
+> Сторонний сервер (вариант B) отдаёт собственные инструменты; текст источников в
+> отчёте при этом может быть пустым (report берёт тела из локального corpus) —
+> названия/URL источников и tool-trace заполняются корректно.
+
+### 4.2. Playwright — реальный браузер в Computer-Use QA
+
+QA-модуль по умолчанию гоняет быстрый виртуальный UI. Чтобы прогнать те же сценарии
+в **настоящем headless chromium**:
+
+```bash
+uv run playwright install chromium   # один раз — скачивает браузер (~150MB)
+make e2e                             # = uv run pytest -m playwright
+```
+
+`make test` browser-тесты не трогает (они deselect'ятся по умолчанию), так что
+chromium для обычного прогона не нужен.
+
+---
+
 ## Troubleshooting
 
 | Симптом | Причина / решение |

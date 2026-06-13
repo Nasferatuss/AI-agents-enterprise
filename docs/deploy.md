@@ -43,12 +43,28 @@ docker compose -f infra/docker/docker-compose.yml up -d
 Put a reverse proxy (Caddy/nginx) in front for TLS, and set
 `WB_CORS_ORIGINS=["https://<your-host>"]`.
 
-> **Before exposing to the internet**, close the auth/rate-limit gaps documented
-> in [`security.md`](security.md) → Known limitations (no API auth, no rate
-> limiting). They are deliberately out of scope for the local MVP.
+> **Before exposing to the internet**, turn on the access controls (off by default
+> so the local demo stays open) — see [`security.md`](security.md):
+> ```dotenv
+> WB_API_KEY=<a-long-random-secret>   # require X-API-Key on every /v1/*
+> WB_RATE_LIMIT_PER_MIN=60            # cap POST /v1/* per client IP
+> ```
+> The rate limiter is per-process; a multi-instance deployment should move the
+> counter to Redis.
+
+### Optional — real MCP tools
+
+Deep Research can source its tools from a real MCP server over stdio instead of the
+bundled corpus (same gateway allowlist + audit). Set `WB_MCP_SERVER_COMMAND` (e.g.
+`python -m workbench_toolgateway.mcp_server`, or a third-party server via `uvx`) —
+see [`setup.md`](setup.md) §4.1.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR: `uv sync`,
-ruff lint + format check, the full pytest suite (incl. the eval-regression gate
-and the adversarial SQL suite), and the Next.js production build.
+GitHub Actions (`.github/workflows/ci.yml`) runs three jobs on every push/PR:
+- **lint + tests** — `uv sync`, ruff lint + format check, the full pytest suite
+  (incl. the eval-regression gate and the adversarial SQL suite; Playwright
+  e2e is deselected here);
+- **computer-use e2e (real browser)** — installs chromium and runs the
+  Playwright scenarios (`pytest -m playwright`);
+- **ui build** — the Next.js production build.
