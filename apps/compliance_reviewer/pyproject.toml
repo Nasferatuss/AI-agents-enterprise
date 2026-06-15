@@ -5,6 +5,9 @@ description = "Compliance & Risk Reviewer (module #6) — PII detection, policy 
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "pypdf>=4",
+    "python-docx>=1.1",
+    "python-multipart>=0.0.9",
     "workbench-shared",
     "workbench-runtime",
 ]

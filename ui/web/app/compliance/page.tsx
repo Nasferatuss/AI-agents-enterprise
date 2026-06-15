@@ -35,16 +35,12 @@ export default function CompliancePage() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
 
-  async function review() {
+  async function send(req: () => Promise<Response>) {
     setLoading(true);
     setError(null);
     setReport(null);
     try {
-      const res = await fetch(`${API_URL}/v1/apps/compliance/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ document: doc }),
-      });
+      const res = await req();
       if (!res.ok) {
         const b = await res.json().catch(() => null);
         throw new Error(b?.detail ?? `HTTP ${res.status}`);
@@ -55,6 +51,30 @@ export default function CompliancePage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function review() {
+    return send(() =>
+      fetch(`${API_URL}/v1/apps/compliance/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document: doc }),
+      }),
+    );
+  }
+
+  function reviewFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-uploading the same file
+    if (!file) return;
+    const form = new FormData();
+    form.append("file", file);
+    return send(() =>
+      fetch(`${API_URL}/v1/apps/compliance/review/file`, {
+        method: "POST",
+        body: form,
+      }),
+    );
   }
 
   return (
@@ -78,13 +98,27 @@ export default function CompliancePage() {
         rows={5}
         className="mt-6 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-100 outline-none focus:border-zinc-600"
       />
-      <button
-        onClick={review}
-        disabled={loading || !doc.trim()}
-        className="mt-3 rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
-      >
-        {loading ? "Reviewing…" : "Review document"}
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          onClick={review}
+          disabled={loading || !doc.trim()}
+          className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
+        >
+          {loading ? "Reviewing…" : "Review document"}
+        </button>
+        <span className="text-xs text-zinc-600">or</span>
+        <label className="cursor-pointer rounded-lg border border-zinc-700 px-5 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500">
+          Upload file
+          <input
+            type="file"
+            accept=".pdf,.docx,.txt,.md"
+            onChange={reviewFile}
+            disabled={loading}
+            className="hidden"
+          />
+        </label>
+        <span className="text-xs text-zinc-600">PDF, DOCX, TXT, MD</span>
+      </div>
 
       {error && (
         <p className="mt-6 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
