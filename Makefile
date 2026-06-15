@@ -1,5 +1,10 @@
 .DEFAULT_GOAL := help
 
+# Pass the repo-root .env to Compose for variable interpolation (host port
+# overrides like WB_PG_HOST_PORT) when it exists. The api service still loads it
+# as container env via its own `env_file:` directive.
+COMPOSE := docker compose -f infra/docker/docker-compose.yml $(if $(wildcard .env),--env-file .env,)
+
 .PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up down ps logs ui ui-build
 
 help: ## Show available targets
@@ -42,16 +47,16 @@ fmt: ## Format Python
 	uv run ruff check --fix .
 
 up: ## Start infra + API via Docker Compose
-	docker compose -f infra/docker/docker-compose.yml up -d --build
+	$(COMPOSE) up -d --build
 
 down: ## Stop Docker Compose stack
-	docker compose -f infra/docker/docker-compose.yml down
+	$(COMPOSE) down
 
 ps: ## Show compose services
-	docker compose -f infra/docker/docker-compose.yml ps
+	$(COMPOSE) ps
 
 logs: ## Tail compose logs
-	docker compose -f infra/docker/docker-compose.yml logs -f --tail=100
+	$(COMPOSE) logs -f --tail=100
 
 ui: ## Run Next.js demo console (dev)
 	cd ui/web && npm run dev
