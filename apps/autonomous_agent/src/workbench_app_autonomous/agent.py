@@ -20,6 +20,7 @@ import json
 
 from pydantic import BaseModel, Field
 
+from workbench_app_autonomous.tools import build_tools
 from workbench_runtime.agent import Agent, run_agent
 from workbench_runtime.demo import (
     CalculatorInput,
@@ -32,6 +33,7 @@ from workbench_runtime.tools import Tool
 from workbench_runtime.types import UserMessage
 
 _DEFAULT_MAX_ITERATIONS = 3
+_ACT_MAX_STEPS = 12
 _MAX_PLAN_STEPS = 6
 
 _PLAN_SYSTEM = (
@@ -46,10 +48,17 @@ _REFLECT_SYSTEM = (
     '"next_focus": "what to focus on next (empty if met)"}'
 )
 _ACT_INSTRUCTIONS = (
-    "You are an autonomous execution agent working toward a goal. Use the "
-    "calculator tool for any arithmetic and utc_now for the current time instead "
-    "of guessing. Use the remember tool to record any durable fact or result you "
-    "discover. Work through the given plan and report concrete results."
+    "You are an autonomous execution agent working toward a goal. You have real "
+    "coworker tools:\n"
+    "- web_search + fetch_url for live web research (search first, then fetch sources).\n"
+    "- run_sql to query the read-only sales/BI database (SELECT only; the schema is "
+    "in the tool description).\n"
+    "- write_file / read_file / list_files for a sandboxed file workspace.\n"
+    "- calculator for arithmetic and utc_now for the current time instead of guessing.\n"
+    "- remember to record any durable fact or result you discover.\n"
+    "Prefer tools over guessing. When asked to produce a substantial deliverable "
+    "(report, analysis, dataset), save it to a file with write_file and report the "
+    "path. Work through the given plan and report concrete results."
 )
 
 
@@ -136,32 +145,36 @@ def _build_act_agent(memory: list[str]) -> Agent:
             memory.append(note)
         return f"remembered: {note}"
 
+    tools = [
+        Tool(
+            name="calculator",
+            description="Evaluate an arithmetic expression (+, -, *, /, **, %). "
+            "Use for any calculation.",
+            input_model=CalculatorInput,
+            handler=calculator,
+        ),
+        Tool(
+            name="utc_now",
+            description="Get the current UTC date and time.",
+            input_model=UtcNowInput,
+            handler=utc_now,
+        ),
+        Tool(
+            name="remember",
+            description="Record a durable fact or result into the scratchpad "
+            "memory so it is available in later steps.",
+            input_model=RememberInput,
+            handler=remember,
+        ),
+        *build_tools(),
+    ]
+
     return Agent(
         name="autonomous-actor",
         instructions=_ACT_INSTRUCTIONS,
-        tools=[
-            Tool(
-                name="calculator",
-                description="Evaluate an arithmetic expression (+, -, *, /, **, %). "
-                "Use for any calculation.",
-                input_model=CalculatorInput,
-                handler=calculator,
-            ),
-            Tool(
-                name="utc_now",
-                description="Get the current UTC date and time.",
-                input_model=UtcNowInput,
-                handler=utc_now,
-            ),
-            Tool(
-                name="remember",
-                description="Record a durable fact or result into the scratchpad "
-                "memory so it is available in later steps.",
-                input_model=RememberInput,
-                handler=remember,
-            ),
-        ],
+        tools=tools,
         complexity="standard",
+        max_steps=_ACT_MAX_STEPS,
     )
 
 

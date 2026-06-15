@@ -8,12 +8,16 @@ dependencies = [
     "workbench-shared",
     "workbench-runtime",
     "workbench-toolgateway",
+    "workbench-app-research",
+    "workbench-app-text2sql",
 ]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-toolgateway = { workspace = true }
+workbench-app-research = { workspace = true }
+workbench-app-text2sql = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

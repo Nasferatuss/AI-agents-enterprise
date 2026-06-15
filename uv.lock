@@ -1968,6 +1968,8 @@ version = "0.1.0"
 source = { editable = "apps/autonomous_agent" }
 dependencies = [
     { name = "fastapi" },
+    { name = "workbench-app-research" },
+    { name = "workbench-app-text2sql" },
     { name = "workbench-runtime" },
     { name = "workbench-shared" },
     { name = "workbench-toolgateway" },
@@ -1976,6 +1978,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "workbench-app-research", editable = "apps/deep_research" },
+    { name = "workbench-app-text2sql", editable = "apps/text2sql" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
     { name = "workbench-toolgateway", editable = "platform/toolgateway" },
