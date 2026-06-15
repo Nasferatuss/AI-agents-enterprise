@@ -9,5 +9,11 @@ COPY platform/ platform/
 COPY apps/ apps/
 RUN uv sync --frozen --no-dev
 
+# Bundle headless Chromium + its system libraries so the computer-use /browse
+# endpoint works inside the container (playwright is a runtime dep of the cua app).
+# Adds ~400MB; the rest of the demo runs fine without it.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN uv run --no-sync playwright install --with-deps chromium
+
 EXPOSE 8000
 CMD ["uv", "run", "--no-sync", "uvicorn", "workbench_gateway.app:app", "--host", "0.0.0.0", "--port", "8000"]
