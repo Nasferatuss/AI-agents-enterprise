@@ -2,9 +2,10 @@
 
 import time
 
-from fastapi import APIRouter
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
+from workbench_app_cua.browse import BrowseResult, run_browse
 from workbench_app_cua.runner import QAReport, run_qa
 from workbench_app_cua.sandbox import UiSession
 from workbench_app_cua.scenarios import SCENARIOS, scenario_names
@@ -72,6 +73,52 @@ async def run() -> QAReport:
         payload=report.model_dump(),
     )
     return report
+
+
+class BrowseRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+    goal: str = Field(min_length=1, max_length=1024)
+
+
+@router.post("/browse", response_model=BrowseResult)
+async def browse(req: BrowseRequest) -> BrowseResult:
+    """Live computer-use: open a real URL in headless chromium and drive it toward `goal`.
+
+    Returns 503 if the chromium binary is missing (run `playwright install chromium`).
+    """
+    if not req.url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail="url must be an http(s) URL")
+    started = time.monotonic()
+    try:
+        result = await run_browse(get_router(), req.url, req.goal)
+    except Exception as exc:  # chromium missing / launch failure → graceful 503
+        if _is_chromium_missing(exc):
+            raise HTTPException(
+                status_code=503,
+                detail="chromium is not installed — run `playwright install chromium`",
+            ) from exc
+        raise
+    await safe_record(
+        kind="agent",
+        name="computer_use_browse",
+        status="completed" if result.completed else "failed",
+        latency_ms=int((time.monotonic() - started) * 1000),
+        cost_usd=result.cost_usd,
+        num_steps=len(result.steps),
+        error=None if result.completed else "goal not completed",
+        payload=result.model_dump(),
+    )
+    return result
+
+
+def _is_chromium_missing(exc: Exception) -> bool:
+    """Detect a missing/unlaunchable chromium binary from a Playwright error."""
+    msg = str(exc).lower()
+    return (
+        "executable doesn't exist" in msg
+        or "playwright install" in msg
+        or "browsertype.launch" in msg
+    )
 
 
 # names exported for tests / discovery
