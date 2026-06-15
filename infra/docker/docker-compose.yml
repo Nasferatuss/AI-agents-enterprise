@@ -50,6 +50,10 @@ services:
       WB_TRACE_DB_URL: postgresql+asyncpg://workbench:workbench@postgres:5432/workbench
       WB_REDIS_URL: redis://redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
+    volumes:
+      # autonomous agent's file workspace → a real folder at the repo root, so the
+      # artifacts it writes are visible on the host and survive container rebuilds.
+      - ../../agent_workspace:/app/data/agent_workspace
     ports:
       - "${WB_API_HOST_PORT:-8000}:8000"
     depends_on:
