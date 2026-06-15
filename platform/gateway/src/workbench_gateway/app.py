@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from workbench_app_autonomous.api import router as autonomous_router
 
 from workbench_app_compliance.api import router as compliance_router
 from workbench_app_cua.api import router as cua_router
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(research_router)
     app.include_router(cua_router)
     app.include_router(incident_router)
+    app.include_router(autonomous_router)
     log.info("gateway configured", version=__version__)
     return app
 
