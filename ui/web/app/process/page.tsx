@@ -1,8 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+let mermaidReady = false;
+
+function MermaidDiagram({ code }: { code: string }) {
+  const [svg, setSvg] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSvg(null);
+    setFailed(false);
+
+    // Dynamic import keeps mermaid client-only so `next build` (SSR) never
+    // touches `window` at module load.
+    (async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        if (!mermaidReady) {
+          mermaid.initialize({ startOnLoad: false, theme: "dark" });
+          mermaidReady = true;
+        }
+        const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+        const { svg } = await mermaid.render(id, code);
+        if (!cancelled) setSvg(svg);
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
+
+  if (failed) {
+    return (
+      <pre className="mt-2 overflow-x-auto rounded-lg bg-zinc-950 p-3 text-xs leading-relaxed text-sky-300">
+        {code}
+      </pre>
+    );
+  }
+
+  if (!svg) {
+    return (
+      <p className="mt-2 rounded-lg bg-zinc-950 p-3 text-xs text-zinc-500">
+        rendering diagram…
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div
+        className="overflow-x-auto rounded-lg bg-zinc-950 p-3 [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:max-w-full"
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      <details className="text-[11px] text-zinc-600">
+        <summary className="cursor-pointer hover:text-zinc-400">
+          show source
+        </summary>
+        <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-950 p-3 leading-relaxed text-sky-300">
+          {code}
+        </pre>
+      </details>
+    </div>
+  );
+}
 
 const SAMPLE = `When a new employee joins, HR creates a record in the HR system. IT provisions a laptop and creates accounts in the identity provider. The employee receives a welcome email with shared credentials for the team wiki. The manager approves access to the production database. However, an earlier section states contractors may never access production — it is unclear who approves access for a contractor. There is no statement about data retention for terminated employees.`;
 
@@ -108,12 +175,7 @@ export default function ProcessPage() {
             <h2 className="text-sm font-medium text-zinc-300">
               Process map <span className="text-zinc-600">(Mermaid)</span>
             </h2>
-            <pre className="mt-2 overflow-x-auto rounded-lg bg-zinc-950 p-3 text-xs leading-relaxed text-sky-300">
-              {report.mermaid}
-            </pre>
-            <p className="mt-1 text-[11px] text-zinc-600">
-              renders in GitHub / Obsidian, or paste into mermaid.live
-            </p>
+            <MermaidDiagram code={report.mermaid} />
           </section>
 
           {report.contradictions.length > 0 && (
