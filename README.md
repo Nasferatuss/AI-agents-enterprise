@@ -7,8 +7,9 @@ Service-oriented platform for building, evaluating, and operating production-gra
 One core, ten demo apps — every module demonstrates the full engineering loop:
 **context → tools → reasoning → action → eval → trace → governance → demo.**
 
-> Status: **Portfolio complete** — service-oriented core + all 10 demo modules, hardened (Phase 4 QA).
-> Roadmap: MVP → **Portfolio (10 modules)** → Showcase.
+> Status: **Portfolio complete + flagships** — service-oriented core, 10 demo modules, and
+> three deeper flagship agents (autonomous plan/act/reflect, real-web deep research, live
+> computer-use). Hardened: 200+ tests, CI, Docker.
 
 ## What's built
 
@@ -31,6 +32,53 @@ for every run).
 8. **Guarded Computer-Use QA** — agent drives a legacy UI sandbox, reports bugs → `/qa`
 9. **Synthetic Eval Generator** — corpus → eval dataset (standard/negative/multi-hop) + benchmark card
 10. **Incident Response Agent** — failed traces → root-cause classification → RCA report → `/incidents`
+
+**Flagship agents** (deeper, externally-connected — the "wow" tier):
+- 🤖 **Autonomous Agent** — `plan → act (tools) → reflect → repeat` until the goal is met, with a
+  memory scratchpad. Built on the runtime tool-loop. → `/autonomous`
+- 🌐 **Deep Research over the real web** — DuckDuckGo search + real page fetch & extraction, synthesized
+  into a report citing **real source URLs** (opt-in: `WB_RESEARCH_LIVE_WEB=true`; falls back to the
+  bundled corpus). → `/research`
+- 🖥️ **Live Computer-Use** — opens a **real website** in headless Chromium and drives it toward a goal
+  (`observe → act → repeat`), with a safety boundary that refuses payment/destructive actions. → `/browse`
+
+## What's real vs demo
+
+This is a **reference platform**, and it's deliberate about which parts are production-grade engineering
+and which are scoped demos. Being explicit so reviewers know exactly what they're looking at:
+
+**Real — production-grade engineering (the substance):**
+- **Model Router** — cost-aware routing by task complexity (local → cheap → frontier) with graceful
+  fallback and per-call cost accounting. Provider-agnostic; add a provider via config, not code.
+- **Tool Gateway** — every tool call passes an allowlist + audit log. A real security boundary; the same
+  governance wraps real MCP tools.
+- **Observability** — every run (agent, workflow, eval) is traced with cost, latency, status; best-effort
+  (never blocks the request). Powers the incident-response module.
+- **Evaluation** — retrieval metrics + citation accuracy + **LLM-as-judge** (judged by a stronger model),
+  with a **CI regression gate** that fails the build when quality drops.
+- **RAG Core** — chunking, local embeddings, Qdrant, hybrid (vector + keyword) retrieval.
+- **Workflow engine** — predictable state machine with retries, branching, and **human-in-the-loop
+  approval gates** with a full audit trail.
+- **The three flagships above** — real DuckDuckGo web research, real headless-Chromium browsing, and a real
+  multi-iteration plan/act/reflect loop.
+- **Engineering rigor** — 200+ tests (network-free), CI (lint + tests + real-browser e2e + UI build),
+  Docker Compose stack, Alembic migrations.
+
+**Demo — illustrative fixtures & stubs (scoped on purpose):**
+- **Sample data**: the Text-to-SQL database, the Computer-Use QA sandbox page, and the default research
+  corpus are bundled fixtures, not production data sources.
+- **Stubbed external actions** (these are the integration seams, marked in code):
+  - Workflow `grant_access` returns a confirmation note — it does **not** call a real IAM system. It's where
+    you'd wire AWS IAM / Okta / your provisioning API.
+  - Compliance PII detection uses regex + a sample policy set (extend with your rules / classifiers).
+  - The Computer-Use **QA** module runs a fixed scenario set against a bundled CRM page (the **`/browse`
+    flagship**, by contrast, drives real live sites).
+- **LLM providers are yours to supply** — set keys / a local Ollama endpoint in `.env`. Without them, the
+  deterministic layers (PII scan, SQL guards, retrieval, scoring, routing decisions) still run.
+
+The guiding principle throughout: **deterministic core + LLM only for narrative/reasoning.** Critical
+facts (findings, scores, verdicts) are computed deterministically so they're auditable and stable; the
+model explains them, it doesn't decide them.
 
 ## Architecture
 
