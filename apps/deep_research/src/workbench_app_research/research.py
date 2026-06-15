@@ -12,7 +12,7 @@ import json
 from pydantic import BaseModel
 
 from workbench_runtime.router import ModelRouter
-from workbench_runtime.types import ChatMessage
+from workbench_runtime.types import UserMessage
 from workbench_toolgateway import AuditEntry, ToolGateway
 
 _ALLOWLIST = {"web_search", "fetch", "kb_search"}
@@ -78,7 +78,7 @@ async def run_research(
 
     # 1. plan
     plan = await router.step(
-        [ChatMessage(role="user", content=question)],
+        [UserMessage(content=question)],
         complexity="complex",
         system=_PLAN_SYSTEM,
         max_tokens=512,
@@ -105,7 +105,7 @@ async def run_research(
         f"[{s.n}] {s.title} ({s.url})\n{_source_text(gateway, s.url)}" for s in sources
     )
     report_out = await router.step(
-        [ChatMessage(role="user", content=f"Question: {question}\n\nSources:\n{numbered}")],
+        [UserMessage(content=f"Question: {question}\n\nSources:\n{numbered}")],
         complexity="complex",
         system=_REPORT_SYSTEM,
         max_tokens=1024,

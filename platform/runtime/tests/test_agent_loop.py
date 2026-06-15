@@ -155,6 +155,19 @@ def test_transcript_renders_to_both_wire_formats():
     assert ant[2]["role"] == "user"
 
 
+def test_wire_renderers_reject_non_transcript_items():
+    # A ChatMessage (the /v1/chat type) is NOT a Transcript item. If one slips into
+    # step(), both renderers must fail loudly rather than drop the user turn — which
+    # silently makes OpenAI answer from the system prompt alone and Anthropic 400.
+    from workbench_runtime.types import ChatMessage
+
+    bogus = [ChatMessage(role="user", content="hi")]
+    with pytest.raises(ValueError, match="produced no messages"):
+        to_openai_messages(bogus, system="sys")
+    with pytest.raises(ValueError, match="produced no messages"):
+        to_anthropic_messages(bogus)
+
+
 def test_demo_calculator_is_safe():
     assert calculator(CalculatorInput(expression="2 * (3 + 4) / 5")) == "2.8"
     with pytest.raises(ValueError):

@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from workbench_runtime.router import ModelRouter
-from workbench_runtime.types import ChatMessage
+from workbench_runtime.types import UserMessage
 
 _SYSTEM = (
     "You are a business analyst. Read the document (a spec / process description) "
@@ -84,7 +84,7 @@ async def analyze_document(router: ModelRouter, document: str) -> ProcessReport:
     if not document.strip():
         raise ProcessAnalysisError("document is empty")
     out = await router.step(
-        [ChatMessage(role="user", content=document)],
+        [UserMessage(content=document)],
         complexity="complex",
         system=_SYSTEM,
         max_tokens=2048,

@@ -21,7 +21,7 @@ from workbench_app_compliance.policy import (
     score_risk,
 )
 from workbench_runtime.router import ModelRouter, NoProviderAvailableError
-from workbench_runtime.types import ChatMessage
+from workbench_runtime.types import UserMessage
 
 _SYSTEM = (
     "You are a compliance officer. You are given automated findings (PII matches "
@@ -63,7 +63,7 @@ async def review_document(
     prompt = f"{_findings_brief(pii, violations)}\n\nRisk score: {score}/100 ({band})."
     try:
         out = await router.step(
-            [ChatMessage(role="user", content=prompt)],
+            [UserMessage(content=prompt)],
             complexity="standard",
             system=_SYSTEM,
             max_tokens=768,

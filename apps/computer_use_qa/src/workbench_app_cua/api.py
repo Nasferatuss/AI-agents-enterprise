@@ -11,7 +11,7 @@ from workbench_app_cua.scenarios import SCENARIOS, scenario_names
 from workbench_observability import safe_record
 from workbench_runtime import get_router
 from workbench_runtime.router import NoProviderAvailableError
-from workbench_runtime.types import ChatMessage
+from workbench_runtime.types import UserMessage
 
 router = APIRouter(prefix="/v1/apps/cua", tags=["computer-use-qa"])
 
@@ -46,7 +46,7 @@ async def _narrate(report: QAReport) -> None:
     )
     try:
         out = await get_router().step(
-            [ChatMessage(role="user", content=findings)],
+            [UserMessage(content=findings)],
             complexity="standard",
             system=_NARRATE_SYSTEM,
             max_tokens=512,

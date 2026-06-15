@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from workbench_app_incident.classify import RootCause, classify
 from workbench_observability import TraceDetail
 from workbench_runtime.router import ModelRouter, NoProviderAvailableError
-from workbench_runtime.types import ChatMessage
+from workbench_runtime.types import UserMessage
 
 _SYSTEM = (
     "You are an SRE doing incident response on an AI agent run. Given the failure "
@@ -55,7 +55,7 @@ async def analyze_incident(router: ModelRouter, trace: TraceDetail) -> RcaReport
     )
     try:
         out = await router.step(
-            [ChatMessage(role="user", content=prompt)],
+            [UserMessage(content=prompt)],
             complexity="standard",
             system=_SYSTEM,
             max_tokens=512,

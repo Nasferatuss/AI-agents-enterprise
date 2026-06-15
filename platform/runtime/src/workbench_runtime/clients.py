@@ -45,6 +45,7 @@ def to_openai_messages(transcript: Transcript, system: str | None) -> list[dict]
     messages: list[dict] = []
     if system:
         messages.append({"role": "system", "content": system})
+    rendered = len(messages)
     for item in transcript:
         match item:
             case UserMessage():
@@ -65,6 +66,15 @@ def to_openai_messages(transcript: Transcript, system: str | None) -> list[dict]
                 messages.append(
                     {"role": "tool", "tool_call_id": item.tool_call_id, "content": item.content}
                 )
+    if transcript and len(messages) == rendered:
+        # Items were given but none rendered → they aren't Transcript types (e.g. a
+        # ChatMessage passed straight to step()). Fail loudly: an empty user turn
+        # makes OpenAI-compatible models answer from the system prompt alone.
+        raise ValueError(
+            f"transcript produced no messages; got item types "
+            f"{[type(i).__name__ for i in transcript]} (expected UserMessage/"
+            f"AssistantMessage/ToolResultMessage)"
+        )
     return messages
 
 
@@ -175,6 +185,14 @@ def to_anthropic_messages(transcript: Transcript) -> list[dict]:
                         ],
                     }
                 )
+    if transcript and not messages:
+        # See to_openai_messages: Anthropic rejects an empty messages array outright
+        # (400 "at least one message is required"). Surface the real cause instead.
+        raise ValueError(
+            f"transcript produced no messages; got item types "
+            f"{[type(i).__name__ for i in transcript]} (expected UserMessage/"
+            f"AssistantMessage/ToolResultMessage)"
+        )
     return messages
 
 

@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from workbench_rag.pipeline import RagPipeline
 from workbench_runtime.router import ModelRouter
-from workbench_runtime.types import ChatMessage
+from workbench_runtime.types import UserMessage
 from workbench_shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -95,7 +95,7 @@ async def generate_eval_dataset(
     stride = max(len(corpus) // max(n_standard, 1), 1)
     for i, chunk in enumerate(corpus[::stride][:n_standard]):
         out = await router.step(
-            [ChatMessage(role="user", content=chunk.text)],
+            [UserMessage(content=chunk.text)],
             complexity="standard",
             system=_STANDARD_SYSTEM,
             max_tokens=512,
@@ -116,7 +116,7 @@ async def generate_eval_dataset(
     pairs = _distinct_source_pairs(corpus, n_multihop)
     for i, (a, b) in enumerate(pairs):
         out = await router.step(
-            [ChatMessage(role="user", content=f"Passage A:\n{a.text}\n\nPassage B:\n{b.text}")],
+            [UserMessage(content=f"Passage A:\n{a.text}\n\nPassage B:\n{b.text}")],
             complexity="complex",
             system=_MULTIHOP_SYSTEM,
             max_tokens=512,
@@ -137,7 +137,7 @@ async def generate_eval_dataset(
     topics = ", ".join(sorted({c.source for c in corpus}))
     for i in range(n_negative):
         out = await router.step(
-            [ChatMessage(role="user", content=f"Topics covered: {topics}")],
+            [UserMessage(content=f"Topics covered: {topics}")],
             complexity="standard",
             system=_NEGATIVE_SYSTEM,
             max_tokens=256,
