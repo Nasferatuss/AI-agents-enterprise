@@ -18,6 +18,7 @@ dependencies = [
     "workbench-app-research",
     "workbench-app-cua",
     "workbench-app-incident",
+    "workbench-app-autonomous",
 ]
 
 [dependency-groups]
@@ -29,7 +30,7 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer", "platform/toolgateway", "apps/deep_research", "apps/computer_use_qa", "apps/incident_response"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer", "platform/toolgateway", "apps/deep_research", "apps/computer_use_qa", "apps/incident_response", "apps/autonomous_agent"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
@@ -46,6 +47,7 @@ workbench-toolgateway = { workspace = true }
 workbench-app-research = { workspace = true }
 workbench-app-cua = { workspace = true }
 workbench-app-incident = { workspace = true }
+workbench-app-autonomous = { workspace = true }
 
 [tool.ruff]
 line-length = 100

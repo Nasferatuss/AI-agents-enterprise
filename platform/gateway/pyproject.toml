@@ -18,6 +18,7 @@ dependencies = [
     "workbench-app-research",
     "workbench-app-cua",
     "workbench-app-incident",
+    "workbench-app-autonomous",
 ]
 
 [tool.uv.sources]
@@ -27,6 +28,7 @@ workbench-app-compliance = { workspace = true }
 workbench-app-research = { workspace = true }
 workbench-app-cua = { workspace = true }
 workbench-app-incident = { workspace = true }
+workbench-app-autonomous = { workspace = true }
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-rag = { workspace = true }
