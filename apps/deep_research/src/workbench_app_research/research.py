@@ -125,7 +125,16 @@ async def run_research(
 
 
 def _source_text(gateway: ToolGateway, url: str) -> str:
-    """Pull the fetched text back out of the audit-free corpus via a fresh fetch."""
+    """Recover the fetched body for `url` for the report stage.
+
+    Live-web runs cache real bodies in ``web.BODY_CACHE`` during the research
+    loop (the gateway keeps no payloads); corpus runs fall back to ``CORPUS``.
+    """
+    from workbench_app_research.web import BODY_CACHE
+
+    if url in BODY_CACHE:
+        return BODY_CACHE[url].get("text", "")
+
     from workbench_toolgateway.corpus import CORPUS
 
     return CORPUS.get(url, {}).get("text", "")

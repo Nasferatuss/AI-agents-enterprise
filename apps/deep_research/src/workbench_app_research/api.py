@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from workbench_app_research.research import ResearchReport, run_research
+from workbench_app_research.web import build_live_gateway
 from workbench_observability import safe_record
 from workbench_runtime import get_router
 from workbench_runtime.router import NoProviderAvailableError
@@ -58,6 +59,13 @@ async def research(req: ResearchRequest) -> ResearchReport:
                 report = await run_research(
                     get_router(), gateway, req.question, allowlist=set(names)
                 )
+        elif get_settings().research_live_web:
+            # Real web research: web_search via DuckDuckGo, fetch downloads URLs.
+            # Same ToolSpec names as the corpus, so run_research is unchanged; a
+            # network failure degrades to empty results (see web.py), and the
+            # corpus stays available as the report-text fallback (_source_text).
+            gateway = build_live_gateway()  # fresh per request → clean audit log
+            report = await run_research(get_router(), gateway, req.question)
         else:
             gateway = build_default_gateway()  # fresh per request → clean audit log
             report = await run_research(get_router(), gateway, req.question)

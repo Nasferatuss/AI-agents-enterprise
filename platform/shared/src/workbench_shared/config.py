@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # instead of the in-process corpus connectors. Empty = current behavior.
     mcp_server_command: str = ""
 
+    # Deep-research live web (apps/deep_research). When true (WB_RESEARCH_LIVE_WEB=true)
+    # and no MCP server is configured, the agent's web_search/fetch hit the real
+    # internet (DuckDuckGo + httpx page fetch) instead of the in-process corpus,
+    # falling back to the corpus when the network fails. Off = current behavior.
+    research_live_web: bool = False
+
     # Observability trace store (Sprint 5, ADR-006). Defaults to a local sqlite
     # file so traces work without Docker; `make up` overrides this to Postgres
     # (postgresql+asyncpg://…). Always an async SQLAlchemy URL.
