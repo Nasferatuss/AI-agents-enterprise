@@ -5,15 +5,16 @@ description = "Text-to-SQL BI agent (MVP module #2) — schema-aware SQL agent w
 requires-python = ">=3.12"
 dependencies = [
     "sqlalchemy>=2.0",
-    "sqlglot>=25.0",
     "fastapi>=0.115",
     "workbench-shared",
     "workbench-runtime",
+    "workbench-capabilities",
 ]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
+workbench-capabilities = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

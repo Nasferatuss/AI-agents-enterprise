@@ -37,7 +37,12 @@ Acted on a multi-agent code/security/architecture/product review.
 - **Architecture (ADR-010)** — durable run store (`agent_runs` + Alembic 0002):
   workflow HITL runs survive a gateway restart; async run model for the
   autonomous flagship (`POST /runs → 202`, poll `GET /runs/{id}`); Idempotency-Key
-  on expensive submissions; router circuit-breaker + 429 backoff.
+  on expensive submissions; router circuit-breaker + 429 backoff. Plus a
+  distributed job queue (`workbench-jobs`: in-process + Redis/worker backends).
+- **Service-Oriented Core (ADR-001)** — extracted `platform/capabilities`
+  (SQL guard, schema reflection, sample BI database, governed web) so apps depend
+  on the platform, not each other; removed the autonomous→text2sql/research
+  app-to-app coupling.
 - **Governance** — the Tool Gateway audit sink is wired to persist every tool
   call (allowed and denied) to the trace store.
 - **Product** — published cost-aware routing benchmark (`docs/benchmarks.md`,

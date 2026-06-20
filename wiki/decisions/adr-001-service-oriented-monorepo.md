@@ -19,5 +19,13 @@ updated: 2026-06-07
 **Следствие:** monorepo с `platform/` (слои) и `apps/` (модули). Риск поддержки
 monorepo митигируется чёткой структурой, Makefile, Docker Compose, docs → [[risk-register]].
 
+**Уточнение (2026-06-20):** ревью выявило горизонтальную связь app→app — флагман
+`autonomous` импортировал SQL-guard/engine из `text2sql` и web-коннекторы из
+`deep_research`. Это эрозия принципа (apps зависят от платформы, не друг от друга).
+Исправлено выделением `platform/capabilities` (`workbench-capabilities`):
+read-only SQL guard, schema reflection, sample BI database, governed live web —
+общие capabilities, на которые теперь опираются и `text2sql`, и `deep_research`, и
+`autonomous`. App→app зависимостей не осталось.
+
 ## Sources
 - `Дорожная карта.pdf` стр. 1–2, 23.

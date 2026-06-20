@@ -5,17 +5,17 @@ description = "Deep Research Agent (module #7) — plan → research via Tool Ga
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
-    "ddgs>=9",
-    "beautifulsoup4>=4.12",
     "workbench-shared",
     "workbench-runtime",
     "workbench-toolgateway",
+    "workbench-capabilities",
 ]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-toolgateway = { workspace = true }
+workbench-capabilities = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

@@ -8,6 +8,7 @@ dependencies = [
     "workbench-gateway",
     "workbench-runtime",
     "workbench-jobs",
+    "workbench-capabilities",
     "workbench-rag",
     "workbench-evals",
     "workbench-app-text2sql",
@@ -31,13 +32,14 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/jobs", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer", "platform/toolgateway", "apps/deep_research", "apps/computer_use_qa", "apps/incident_response", "apps/autonomous_agent"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/jobs", "platform/capabilities", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer", "platform/toolgateway", "apps/deep_research", "apps/computer_use_qa", "apps/incident_response", "apps/autonomous_agent"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-gateway = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-jobs = { workspace = true }
+workbench-capabilities = { workspace = true }
 workbench-rag = { workspace = true }
 workbench-evals = { workspace = true }
 workbench-app-text2sql = { workspace = true }

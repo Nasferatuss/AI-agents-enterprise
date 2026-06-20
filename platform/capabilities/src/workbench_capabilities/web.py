@@ -1,4 +1,4 @@
-"""Real web connectors for the deep-research pipeline: live web_search + fetch.
+"""Governed live web connectors: live web_search + fetch (reused across apps).
 
 Opt-in (``WB_RESEARCH_LIVE_WEB=true``) alternative to the in-process corpus
 connectors. ``web_search`` discovers sources via DuckDuckGo; ``fetch`` downloads

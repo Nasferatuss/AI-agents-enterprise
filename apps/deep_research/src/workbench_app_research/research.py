@@ -130,7 +130,7 @@ def _source_text(gateway: ToolGateway, url: str) -> str:
     Live-web runs cache real bodies in ``web.BODY_CACHE`` during the research
     loop (the gateway keeps no payloads); corpus runs fall back to ``CORPUS``.
     """
-    from workbench_app_research.web import BODY_CACHE
+    from workbench_capabilities.web import BODY_CACHE
 
     if url in BODY_CACHE:
         return BODY_CACHE[url].get("text", "")

@@ -3,10 +3,9 @@ import json
 import httpx
 import pytest
 from sqlalchemy import create_engine
+from workbench_capabilities import create_sample_db, schema_description
 
 from workbench_app_text2sql.agent import build_agent
-from workbench_app_text2sql.sampledb import create_sample_db
-from workbench_app_text2sql.schema import schema_description
 from workbench_runtime.agent import run_agent
 from workbench_runtime.providers import Provider
 from workbench_runtime.router import ModelRouter

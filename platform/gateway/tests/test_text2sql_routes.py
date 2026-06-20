@@ -9,8 +9,7 @@ from workbench_runtime.types import AgentRun, RunContext, Usage
 @pytest.fixture
 async def client(tmp_path, monkeypatch):
     from sqlalchemy import create_engine
-
-    from workbench_app_text2sql.sampledb import create_sample_db
+    from workbench_capabilities import create_sample_db
 
     db = create_sample_db(tmp_path / "retail.db")
     engine = create_engine(f"sqlite:///file:{db}?mode=ro&uri=true")

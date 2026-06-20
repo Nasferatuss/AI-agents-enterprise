@@ -17,6 +17,7 @@ members = [
     "workbench-app-process",
     "workbench-app-research",
     "workbench-app-text2sql",
+    "workbench-capabilities",
     "workbench-evals",
     "workbench-gateway",
     "workbench-jobs",
@@ -1927,6 +1928,7 @@ dependencies = [
     { name = "workbench-app-process" },
     { name = "workbench-app-research" },
     { name = "workbench-app-text2sql" },
+    { name = "workbench-capabilities" },
     { name = "workbench-evals" },
     { name = "workbench-gateway" },
     { name = "workbench-jobs" },
@@ -1955,6 +1957,7 @@ requires-dist = [
     { name = "workbench-app-process", editable = "apps/process_investigator" },
     { name = "workbench-app-research", editable = "apps/deep_research" },
     { name = "workbench-app-text2sql", editable = "apps/text2sql" },
+    { name = "workbench-capabilities", editable = "platform/capabilities" },
     { name = "workbench-evals", editable = "platform/evals" },
     { name = "workbench-gateway", editable = "platform/gateway" },
     { name = "workbench-jobs", editable = "platform/jobs" },
@@ -1980,8 +1983,7 @@ version = "0.1.0"
 source = { editable = "apps/autonomous_agent" }
 dependencies = [
     { name = "fastapi" },
-    { name = "workbench-app-research" },
-    { name = "workbench-app-text2sql" },
+    { name = "workbench-capabilities" },
     { name = "workbench-jobs" },
     { name = "workbench-observability" },
     { name = "workbench-runtime" },
@@ -1992,8 +1994,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "workbench-app-research", editable = "apps/deep_research" },
-    { name = "workbench-app-text2sql", editable = "apps/text2sql" },
+    { name = "workbench-capabilities", editable = "platform/capabilities" },
     { name = "workbench-jobs", editable = "platform/jobs" },
     { name = "workbench-observability", editable = "platform/observability" },
     { name = "workbench-runtime", editable = "platform/runtime" },
@@ -2086,9 +2087,8 @@ name = "workbench-app-research"
 version = "0.1.0"
 source = { editable = "apps/deep_research" }
 dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "ddgs" },
     { name = "fastapi" },
+    { name = "workbench-capabilities" },
     { name = "workbench-runtime" },
     { name = "workbench-shared" },
     { name = "workbench-toolgateway" },
@@ -2096,9 +2096,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.12" },
-    { name = "ddgs", specifier = ">=9" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "workbench-capabilities", editable = "platform/capabilities" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
     { name = "workbench-toolgateway", editable = "platform/toolgateway" },
@@ -2111,7 +2110,7 @@ source = { editable = "apps/text2sql" }
 dependencies = [
     { name = "fastapi" },
     { name = "sqlalchemy" },
-    { name = "sqlglot" },
+    { name = "workbench-capabilities" },
     { name = "workbench-runtime" },
     { name = "workbench-shared" },
 ]
@@ -2120,9 +2119,34 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "sqlalchemy", specifier = ">=2.0" },
-    { name = "sqlglot", specifier = ">=25.0" },
+    { name = "workbench-capabilities", editable = "platform/capabilities" },
     { name = "workbench-runtime", editable = "platform/runtime" },
     { name = "workbench-shared", editable = "platform/shared" },
+]
+
+[[package]]
+name = "workbench-capabilities"
+version = "0.1.0"
+source = { editable = "platform/capabilities" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "ddgs" },
+    { name = "httpx" },
+    { name = "sqlalchemy" },
+    { name = "sqlglot" },
+    { name = "workbench-shared" },
+    { name = "workbench-toolgateway" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.12" },
+    { name = "ddgs", specifier = ">=9" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+    { name = "sqlglot", specifier = ">=25.0" },
+    { name = "workbench-shared", editable = "platform/shared" },
+    { name = "workbench-toolgateway", editable = "platform/toolgateway" },
 ]
 
 [[package]]

@@ -4,9 +4,9 @@ import json
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from workbench_capabilities import get_engine, schema_description
 
-from workbench_app_text2sql.agent import build_agent, get_engine
-from workbench_app_text2sql.schema import schema_description
+from workbench_app_text2sql.agent import build_agent
 from workbench_runtime.agent import run_agent
 from workbench_runtime.router import NoProviderAvailableError
 from workbench_runtime.tracing import record_agent_run

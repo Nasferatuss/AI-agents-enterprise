@@ -8,10 +8,10 @@ stub from test_research.py.
 import json
 
 import httpx
+from workbench_capabilities import web
+from workbench_capabilities.web import build_live_gateway
 
-from workbench_app_research import web
 from workbench_app_research.research import run_research
-from workbench_app_research.web import build_live_gateway
 from workbench_runtime.providers import Provider
 from workbench_runtime.router import ModelRouter
 
@@ -119,7 +119,7 @@ def test_live_fetch_rejects_metadata_and_localhost():
 
 
 def test_body_cache_bounded():
-    from workbench_app_research.web import _BODY_CACHE_MAX
+    from workbench_capabilities.web import _BODY_CACHE_MAX
 
     web.BODY_CACHE.clear()
     for i in range(_BODY_CACHE_MAX + 50):

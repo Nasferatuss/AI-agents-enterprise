@@ -17,9 +17,7 @@ from workbench_app_autonomous.tools import (
     _safe_path,
     _write_file,
 )
-
-from workbench_app_text2sql.agent import get_engine
-from workbench_app_text2sql.schema import reflect_tables
+from workbench_capabilities import get_engine, reflect_tables
 
 # --- file sandbox ---
 

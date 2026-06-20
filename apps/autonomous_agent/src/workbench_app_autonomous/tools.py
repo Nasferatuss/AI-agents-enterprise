@@ -23,11 +23,16 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
+from workbench_capabilities import (
+    MAX_ROWS,
+    SqlGuardError,
+    execute_sql,
+    get_engine,
+    reflect_tables,
+    schema_description,
+    web,
+)
 
-from workbench_app_research import web
-from workbench_app_text2sql.agent import get_engine
-from workbench_app_text2sql.safe_sql import MAX_ROWS, SqlGuardError, execute_sql
-from workbench_app_text2sql.schema import reflect_tables, schema_description
 from workbench_runtime.tools import Tool
 from workbench_shared.netguard import UnsafeUrlError, assert_public_url
 

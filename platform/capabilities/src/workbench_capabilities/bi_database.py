@@ -1,12 +1,20 @@
-"""Deterministic sample retail database (sandbox DB per ADR-004).
+"""Sample BI database capability: a deterministic retail sandbox + engine factory.
 
-Small but realistic BI schema: customers → orders → order_items → products.
-Created on first use when the configured sqlite file is missing.
+A small but realistic schema (customers → orders → order_items → products),
+created on first use when the configured sqlite file is missing, and opened
+read-only (sandbox DB per ADR-004). Shared by the text-to-SQL app and the
+autonomous flagship so they query the same governed read-only BI database rather
+than depending on each other.
 """
 
 import random
 import sqlite3
+from functools import lru_cache
 from pathlib import Path
+
+from sqlalchemy import Engine, create_engine, make_url
+
+from workbench_shared.config import get_settings
 
 _SCHEMA = """
 CREATE TABLE customers (
@@ -100,3 +108,16 @@ def create_sample_db(path: str | Path) -> Path:
     finally:
         conn.close()
     return path
+
+
+@lru_cache
+def get_engine() -> Engine:
+    """BI engine from settings; sqlite opens read-only, sample DB auto-created."""
+    url = make_url(get_settings().bi_database_url)
+    if url.get_backend_name() == "sqlite" and url.database:
+        db_path = Path(url.database)
+        if not db_path.exists():
+            create_sample_db(db_path)
+        ro_uri = f"file:{db_path}?mode=ro&uri=true"
+        return create_engine(f"sqlite:///{ro_uri}")
+    return create_engine(url)  # non-sqlite: use a read-only DB user (ADR-004)

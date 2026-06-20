@@ -1,8 +1,12 @@
 import pytest
 from sqlalchemy import create_engine
-
-from workbench_app_text2sql.safe_sql import MAX_ROWS, SqlGuardError, execute_sql, validate_sql
-from workbench_app_text2sql.sampledb import create_sample_db
+from workbench_capabilities import (
+    MAX_ROWS,
+    SqlGuardError,
+    create_sample_db,
+    execute_sql,
+    validate_sql,
+)
 
 ALLOWED = {"customers", "products", "orders", "order_items"}
 
@@ -94,7 +98,7 @@ async def test_execute_returns_rows(engine):
 
 
 async def test_readonly_connection_blocks_writes_even_past_validation(engine):
-    from workbench_app_text2sql.safe_sql import _run
+    from workbench_capabilities.sql_guard import _run
 
     with pytest.raises(Exception, match="readonly|attempt to write"):
         _run(
