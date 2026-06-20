@@ -42,10 +42,21 @@ updated: 2026-06-20
 operational persistence, родственная трейсам; observability уже владеет async-движком
 и Alembic-историей, и от него уже зависит orchestrator. Нулевой новый infra-слой.
 
-**Граница:** это durable single-store, а **не** распределённый job-queue/Temporal.
-Фон исполняется в процессе gateway (`asyncio.create_task`), без отдельного worker-пула
-и без backpressure. Для текущего масштаба (портфолио/демо) этого достаточно; вынос в
-очередь (arq/Celery/Temporal) — следующий шаг, если появится реальная нагрузка.
+5. **Job-queue с двумя бэкендами** ([[workbench-jobs]], `platform/jobs`):
+   `InProcessQueue` (default, zero-config — фон через `asyncio.create_task` в самом
+   gateway) и `RedisQueue` (LPUSH/BRPOP → отдельный worker-процесс
+   `python -m workbench_gateway.worker`). Выбор по `WB_JOB_BACKEND`. Handler'ы
+   регистрируются по `kind`; submit кладёт `Job` в очередь, а исполняет — текущий
+   процесс (inprocess) или любой worker (redis). Submit на любой реплике → исполнение
+   на любом worker'е, с back-pressure через список Redis. В compose worker поднимается
+   профилем `redis-jobs` (`make up-distributed`); по умолчанию демо остаётся
+   in-process и не требует worker'а.
+
+**Граница:** durable single-store + опциональный Redis-worker покрывают
+горизонтальное масштабирование submit/execute и back-pressure. Чего ещё НЕ
+делаем: дедлайны/ретраи-политики/scheduling/result-TTL уровня Temporal/arq — для
+этого взяли бы готовый фреймворк, если появится продовый объём. Worker'ы
+stateless, состояние run-ов — в durable store.
 
 **Связи:** [[adr-006-custom-trace-schema]] · [[adr-007-predictable-orchestration]]
 (HITL gates) · [[observability]] · [[service-oriented-core]] (Agent Runtime)

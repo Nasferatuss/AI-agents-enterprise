@@ -51,6 +51,10 @@ services:
       WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
       WB_REDIS_URL: redis://redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
+      # async run model: "inprocess" (default; the api runs jobs itself) or "redis"
+      # (enqueue to Redis → the `worker` service below executes them). For the redis
+      # path, bring up the worker: docker compose --profile redis-jobs up.
+      WB_JOB_BACKEND: ${WB_JOB_BACKEND:-inprocess}
     volumes:
       # autonomous agent's file workspace → a real folder at the repo root, so the
       # artifacts it writes are visible on the host and survive container rebuilds.
@@ -64,6 +68,32 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+
+  # Background job worker for the Redis-backed async run model. Off by default;
+  # start it (and set WB_JOB_BACKEND=redis) with: docker compose --profile redis-jobs up.
+  worker:
+    profiles: ["redis-jobs"]
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    command: ["uv", "run", "--no-sync", "python", "-m", "workbench_gateway.worker"]
+    env_file:
+      - path: ../../.env
+        required: false
+    environment:
+      WB_ENV: dev
+      WB_JOB_BACKEND: redis
+      WB_POSTGRES_DSN: postgresql://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
+      WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
+      WB_REDIS_URL: redis://redis:6379/0
+      WB_QDRANT_URL: http://qdrant:6333
+    volumes:
+      - ../../agent_workspace:/app/data/agent_workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   ui:
     build:

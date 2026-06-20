@@ -5,7 +5,7 @@
 # as container env via its own `env_file:` directive.
 COMPOSE := docker compose -f infra/docker/docker-compose.yml $(if $(wildcard .env),--env-file .env,)
 
-.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up down ps logs ui ui-build bench bench-live
+.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up up-distributed worker down ps logs ui ui-build bench bench-live
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -55,8 +55,14 @@ fmt: ## Format Python
 up: ## Start infra + API via Docker Compose
 	$(COMPOSE) up -d --build
 
+up-distributed: ## Start the stack with the Redis-backed job worker (async runs)
+	WB_JOB_BACKEND=redis $(COMPOSE) --profile redis-jobs up -d --build
+
+worker: ## Run the background job worker locally (needs WB_JOB_BACKEND=redis + Redis)
+	uv run python -m workbench_gateway.worker
+
 down: ## Stop Docker Compose stack
-	$(COMPOSE) down
+	$(COMPOSE) --profile redis-jobs down
 
 ps: ## Show compose services
 	$(COMPOSE) ps

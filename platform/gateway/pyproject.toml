@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "workbench-shared",
     "workbench-runtime",
+    "workbench-jobs",
     "workbench-rag",
     "workbench-evals",
     "workbench-app-text2sql",
@@ -31,6 +32,7 @@ workbench-app-incident = { workspace = true }
 workbench-app-autonomous = { workspace = true }
 workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
+workbench-jobs = { workspace = true }
 workbench-rag = { workspace = true }
 workbench-evals = { workspace = true }
 workbench-app-text2sql = { workspace = true }

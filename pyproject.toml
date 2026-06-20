@@ -7,6 +7,7 @@ dependencies = [
     "workbench-shared",
     "workbench-gateway",
     "workbench-runtime",
+    "workbench-jobs",
     "workbench-rag",
     "workbench-evals",
     "workbench-app-text2sql",
@@ -30,12 +31,13 @@ dev = [
 ]
 
 [tool.uv.workspace]
-members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer", "platform/toolgateway", "apps/deep_research", "apps/computer_use_qa", "apps/incident_response", "apps/autonomous_agent"]
+members = ["platform/shared", "platform/gateway", "platform/runtime", "platform/jobs", "platform/rag", "platform/evals", "platform/orchestrator", "platform/observability", "apps/text2sql", "apps/process_investigator", "apps/compliance_reviewer", "platform/toolgateway", "apps/deep_research", "apps/computer_use_qa", "apps/incident_response", "apps/autonomous_agent"]
 
 [tool.uv.sources]
 workbench-shared = { workspace = true }
 workbench-gateway = { workspace = true }
 workbench-runtime = { workspace = true }
+workbench-jobs = { workspace = true }
 workbench-rag = { workspace = true }
 workbench-evals = { workspace = true }
 workbench-app-text2sql = { workspace = true }
@@ -63,4 +65,4 @@ asyncio_mode = "auto"
 # green without a chromium binary); the dedicated CI job runs `pytest -m playwright`.
 markers = ["playwright: real-browser e2e via Playwright/chromium (run with -m playwright)"]
 addopts = "-m 'not playwright'"
-testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "platform/observability/tests", "apps/text2sql/tests", "apps/process_investigator/tests", "apps/compliance_reviewer/tests", "platform/toolgateway/tests", "apps/deep_research/tests", "apps/computer_use_qa/tests", "apps/incident_response/tests", "apps/autonomous_agent/tests", "tests"]
+testpaths = ["platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "platform/observability/tests", "platform/jobs/tests", "apps/text2sql/tests", "apps/process_investigator/tests", "apps/compliance_reviewer/tests", "platform/toolgateway/tests", "apps/deep_research/tests", "apps/computer_use_qa/tests", "apps/incident_response/tests", "apps/autonomous_agent/tests", "tests"]

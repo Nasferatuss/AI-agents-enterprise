@@ -12,13 +12,13 @@ Exposes the plan→act→reflect→repeat engine (agent.py) over HTTP, two ways:
   from any replica, not just the one that accepted the request.
 """
 
-import asyncio
 import time
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
+from workbench_jobs import Job, get_queue, register_handler
 
 from workbench_app_autonomous.agent import AutonomousResult, run_autonomous
 from workbench_observability import (
@@ -33,9 +33,6 @@ from workbench_runtime.router import NoProviderAvailableError
 router = APIRouter(prefix="/v1/apps/autonomous", tags=["autonomous-agent"])
 
 _KIND = "autonomous"
-# Hold references to in-flight background tasks so they aren't garbage-collected
-# mid-run (asyncio only keeps weak refs to bare tasks).
-_BG_TASKS: set[asyncio.Task] = set()
 
 
 class RunRequest(BaseModel):
@@ -108,6 +105,16 @@ async def _execute_run(run_id: str, goal: str) -> None:
     )
 
 
+async def _autonomous_job(run_id: str, payload: dict) -> None:
+    """Job handler: the worker (in-process or Redis) calls this to run the agent."""
+    await _execute_run(run_id, str(payload.get("goal", "")))
+
+
+# Registered at import; the gateway worker imports the app, so the handler is
+# available in the worker process too.
+register_handler(_KIND, _autonomous_job)
+
+
 @router.post("/runs", response_model=RunHandle, status_code=202)
 async def submit(
     req: RunRequest,
@@ -126,9 +133,9 @@ async def submit(
         payload={"goal": req.goal},
         idempotency_key=idempotency_key,
     )
-    task = asyncio.create_task(_execute_run(run_id, req.goal))
-    _BG_TASKS.add(task)
-    task.add_done_callback(_BG_TASKS.discard)
+    # Hand off to the queue: in-process (asyncio) by default, or Redis → a separate
+    # worker process when WB_JOB_BACKEND=redis.
+    await get_queue().enqueue(Job(kind=_KIND, run_id=run_id, payload={"goal": req.goal}))
     return RunHandle(run_id=run_id, status="pending")
 
 

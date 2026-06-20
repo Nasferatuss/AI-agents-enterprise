@@ -9,6 +9,7 @@ dependencies = [
     "workbench-runtime",
     "workbench-toolgateway",
     "workbench-observability",
+    "workbench-jobs",
     "workbench-app-research",
     "workbench-app-text2sql",
 ]
@@ -18,6 +19,7 @@ workbench-shared = { workspace = true }
 workbench-runtime = { workspace = true }
 workbench-toolgateway = { workspace = true }
 workbench-observability = { workspace = true }
+workbench-jobs = { workspace = true }
 workbench-app-research = { workspace = true }
 workbench-app-text2sql = { workspace = true }
 

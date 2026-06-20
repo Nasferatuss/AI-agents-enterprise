@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
 
+    # Background jobs (async run model). "inprocess" (default) runs jobs as asyncio
+    # tasks in the gateway; "redis" enqueues to Redis for a separate worker process
+    # (`python -m workbench_gateway.worker`) — the horizontally-scalable path.
+    job_backend: Literal["inprocess", "redis"] = "inprocess"
+
     # Model routing (ADR-003 hybrid local/API split + ADR-008 router).
     # API keys use standard env names (ANTHROPIC_API_KEY, OPENAI_API_KEY,
     # DEEPSEEK_API_KEY, MOONSHOT_API_KEY, MIMO_API_KEY) — see workbench_runtime.providers.
