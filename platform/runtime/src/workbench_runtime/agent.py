@@ -10,6 +10,7 @@ used are never thrown away.
 
 from dataclasses import dataclass, field
 
+from workbench_runtime._util import add_cost
 from workbench_runtime.context import ContextEngine, ContextPolicy
 from workbench_runtime.router import ModelRouter, get_router
 from workbench_runtime.tools import Tool, execute_tool
@@ -70,11 +71,7 @@ async def run_agent(
         if compaction:
             run_context.compactions.append(compaction)
             usage = usage + compaction.usage
-            cost = (
-                None
-                if (cost is None or compaction.cost_usd is None)
-                else cost + compaction.cost_usd
-            )
+            cost = add_cost(cost, compaction.cost_usd)
 
         out = await router.step(
             transcript,
@@ -84,7 +81,7 @@ async def run_agent(
             max_tokens=agent.max_tokens,
         )
         usage = usage + out.usage
-        cost = None if (cost is None or out.cost_usd is None) else cost + out.cost_usd
+        cost = add_cost(cost, out.cost_usd)
         transcript.append(AssistantMessage(content=out.text, tool_calls=out.tool_calls))
 
         if not out.tool_calls:

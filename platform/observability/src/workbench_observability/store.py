@@ -2,9 +2,8 @@
 
 import datetime
 import uuid
-from collections import Counter
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 
 from workbench_observability.db import get_sessionmaker
 from workbench_observability.models import Trace
@@ -74,6 +73,36 @@ async def record_trace(
     return trace_id
 
 
+async def record_tool_audit(entry: dict) -> str | None:
+    """Persist one Tool Gateway audit entry as a trace (durable governance log).
+
+    The Tool Gateway's in-memory audit list is ephemeral (the gateway is recreated
+    per request). An app wires this as the gateway's `audit_sink` so every allowed /
+    denied tool call survives. We keep this helper here — rather than importing
+    observability inside toolgateway — to avoid a toolgateway→observability cycle.
+
+    `entry` is an `AuditEntry`-shaped dict: tool, args, allowed, error, latency_ms, at.
+    A denied call (`allowed is False`) is recorded with status "denied"; an allowed
+    call is "failed" if it carried an error, else "completed".
+    """
+    allowed = entry.get("allowed", True)
+    error = entry.get("error")
+    if not allowed:
+        status = "denied"
+    elif error:
+        status = "failed"
+    else:
+        status = "completed"
+    return await safe_record(
+        kind="tool",
+        name=entry.get("tool", "unknown"),
+        status=status,
+        latency_ms=entry.get("latency_ms", 0),
+        error=error,
+        payload={"args": entry.get("args", {}), "at": entry.get("at")},
+    )
+
+
 async def list_traces(kind: str | None = None, limit: int = 50) -> list[TraceSummary]:
     stmt = select(Trace).order_by(Trace.created_at.desc()).limit(limit)
     if kind:
@@ -98,21 +127,64 @@ def _p95(values: list[int]) -> int:
 
 
 async def aggregates() -> TraceAggregates:
-    async with get_sessionmaker()() as session:
-        rows = (await session.execute(select(Trace))).scalars().all()
+    """Dashboard rollups, computed in SQL rather than by loading every trace.
 
-    total = len(rows)
-    successful = sum(1 for r in rows if r.status in SUCCESS_STATUSES)
-    by_kind = Counter(r.kind for r in rows)
-    failures = Counter((r.kind, r.status) for r in rows if r.status not in SUCCESS_STATUSES)
+    Counts, sums and groupings are pushed down via `func.count` / `group_by` so we
+    never materialize all rows just to tally them. The p95 latency is computed in SQL
+    via `percentile_cont` on Postgres; sqlite has no percentile function, so there we
+    fall back to fetching just the latency column and computing it in Python.
+    """
+    is_success = Trace.status.in_(SUCCESS_STATUSES)
+    async with get_sessionmaker()() as session:
+        backend = session.bind.dialect.name
+
+        # Scalar rollups: total, successes, total cost — one round-trip, no row load.
+        totals = (
+            await session.execute(
+                select(
+                    func.count(),
+                    func.coalesce(func.sum(case((is_success, 1), else_=0)), 0),
+                    func.coalesce(func.sum(Trace.cost_usd), 0.0),
+                )
+            )
+        ).one()
+        total, successful, total_cost = int(totals[0]), int(totals[1]), float(totals[2])
+
+        # Counts grouped by kind.
+        by_kind = {
+            kind: int(count)
+            for kind, count in (
+                await session.execute(select(Trace.kind, func.count()).group_by(Trace.kind))
+            ).all()
+        }
+
+        # Failure taxonomy: non-success runs grouped by (kind, status), most common first.
+        failure_rows = (
+            await session.execute(
+                select(Trace.kind, Trace.status, func.count())
+                .where(~is_success)
+                .group_by(Trace.kind, Trace.status)
+                .order_by(func.count().desc())
+            )
+        ).all()
+
+        # p95 latency — in SQL on Postgres; Python fallback elsewhere (e.g. sqlite).
+        if backend == "postgresql":
+            p95 = (
+                await session.execute(
+                    select(func.percentile_cont(0.95).within_group(Trace.latency_ms.asc()))
+                )
+            ).scalar()
+            p95_latency = int(p95) if p95 is not None else 0
+        else:
+            latencies = (await session.execute(select(Trace.latency_ms))).scalars().all()
+            p95_latency = _p95(list(latencies))
+
     return TraceAggregates(
         total=total,
         success_rate=successful / total if total else 0.0,
-        total_cost_usd=round(sum(r.cost_usd or 0.0 for r in rows), 6),
-        p95_latency_ms=_p95([r.latency_ms for r in rows]),
-        by_kind=dict(by_kind),
-        failures=[
-            FailureBucket(kind=k, status=s, count=c)
-            for (k, s), c in sorted(failures.items(), key=lambda kv: kv[1], reverse=True)
-        ],
+        total_cost_usd=round(total_cost, 6),
+        p95_latency_ms=p95_latency,
+        by_kind=by_kind,
+        failures=[FailureBucket(kind=k, status=s, count=int(c)) for k, s, c in failure_rows],
     )

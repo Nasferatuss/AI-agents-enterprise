@@ -24,14 +24,22 @@ _OPS = {
 }
 
 
-def _safe_eval(node: ast.expr) -> float:
+# Cap AST nesting so a pathologically deep expression (e.g. "((((...))))") can't
+# blow the Python recursion limit and crash the worker (DoS). 25 is far beyond
+# any legitimate calculator input.
+_MAX_DEPTH = 25
+
+
+def _safe_eval(node: ast.expr, depth: int = 0) -> float:
+    if depth > _MAX_DEPTH:
+        raise ValueError(f"expression nesting too deep (> {_MAX_DEPTH})")
     match node:
         case ast.Constant(value=int() | float() as v):
             return v
         case ast.BinOp(left=left, op=op, right=right) if type(op) in _OPS:
-            return _OPS[type(op)](_safe_eval(left), _safe_eval(right))
+            return _OPS[type(op)](_safe_eval(left, depth + 1), _safe_eval(right, depth + 1))
         case ast.UnaryOp(op=op, operand=operand) if type(op) in _OPS:
-            return _OPS[type(op)](_safe_eval(operand))
+            return _OPS[type(op)](_safe_eval(operand, depth + 1))
         case _:
             raise ValueError(f"unsupported expression: {ast.dump(node)}")
 

@@ -121,8 +121,12 @@ def _parse_reflection(text: str) -> Reflection:
             missing=str(data.get("missing", "")),
             next_focus=str(data.get("next_focus", "")),
         )
-    # Degrade: cannot judge → assume done so the loop stops cleanly.
-    return Reflection(goal_met=True, missing="", next_focus="")
+    # Degrade safely: an unparseable reflection must NOT be read as success
+    # (that would let a broken JSON response declare the goal met). Keep going
+    # until a real "goal_met": true or the iteration cap stops the loop.
+    return Reflection(
+        goal_met=False, missing="could not parse reflect response", next_focus=""
+    )
 
 
 def _add_cost(total: float | None, part: float | None) -> float | None:

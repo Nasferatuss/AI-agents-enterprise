@@ -1,10 +1,18 @@
 import json
 
 import httpx
-from workbench_app_autonomous.agent import run_autonomous
+import pytest
+from workbench_app_autonomous.agent import _parse_reflection, run_autonomous
 
 from workbench_runtime.providers import Provider
 from workbench_runtime.router import ModelRouter
+
+
+@pytest.mark.parametrize("text", ["not json at all", "", "{}", '{"missing": "x"}'])
+def test_parse_reflection_broken_json_does_not_complete(text):
+    # A reflection we can't parse must NOT be read as success — that would let a
+    # broken model response declare the goal met and stop the loop prematurely.
+    assert _parse_reflection(text).goal_met is False
 
 
 def _router() -> ModelRouter:

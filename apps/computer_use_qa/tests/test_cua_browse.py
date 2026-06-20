@@ -83,7 +83,21 @@ def _scripted_router(actions: list[dict]) -> ModelRouter:
     return router
 
 
-async def test_browse_observe_action_finish_cycle():
+def _allow_file_fixtures(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let these loop/refusal tests keep using local file:// fixtures.
+
+    run_browse now runs every start URL through the SSRF guard (assert_public_url),
+    which correctly rejects the file:// scheme. These tests exercise the observe→act
+    loop and the payment-refusal path, not the URL guard (that has dedicated coverage
+    in test_cua_browse_safety.py), so we relax the guard for the local fixture here.
+    """
+    import workbench_app_cua.browse as browse
+
+    monkeypatch.setattr(browse, "assert_public_url", lambda url, **_: url)
+
+
+async def test_browse_observe_action_finish_cycle(monkeypatch):
+    _allow_file_fixtures(monkeypatch)
     with tempfile.TemporaryDirectory() as d:
         fixture = Path(d) / "fixture.html"
         fixture.write_text(_FIXTURE_HTML, encoding="utf-8")
@@ -110,7 +124,8 @@ async def test_browse_observe_action_finish_cycle():
     assert "Fixture Page" in result.steps[0].observation_summary
 
 
-async def test_browse_refuses_payment_action():
+async def test_browse_refuses_payment_action(monkeypatch):
+    _allow_file_fixtures(monkeypatch)
     with tempfile.TemporaryDirectory() as d:
         fixture = Path(d) / "fixture.html"
         fixture.write_text(_FIXTURE_HTML, encoding="utf-8")
@@ -120,5 +135,43 @@ async def test_browse_refuses_payment_action():
         result = await run_browse(router, url, "complete the purchase")
 
     assert result.completed is False
+    assert result.steps[-1].note is not None
+    assert "refused" in result.steps[-1].note
+
+
+_CHECKOUT_HTML = """<!doctype html>
+<html><head><title>Checkout</title></head>
+<body>
+  <h1 id="heading">Payment details</h1>
+  <form>
+    <input id="cc-number" name="cc-number" placeholder="Card number" />
+    <button id="continue" type="submit">Continue</button>
+  </form>
+</body></html>
+"""
+
+
+async def test_browse_blocks_submit_after_card_entry(monkeypatch):
+    # Multi-step bypass: type a card number into #cc-number, then click a NEUTRAL
+    # "Continue" submit button. The second action must be refused because sensitive
+    # data was entered — even though "Continue" contains no pay/checkout keyword.
+    _allow_file_fixtures(monkeypatch)
+    with tempfile.TemporaryDirectory() as d:
+        fixture = Path(d) / "checkout.html"
+        fixture.write_text(_CHECKOUT_HTML, encoding="utf-8")
+        url = fixture.as_uri()
+
+        router = _scripted_router(
+            [
+                {"action": "type", "selector": "#cc-number", "text": "4111111111111111"},
+                {"action": "click", "selector": "#continue"},
+            ]
+        )
+        result = await run_browse(router, url, "continue past the payment form")
+
+    assert result.completed is False
+    # First action (the type) went through; the second (submit click) is refused.
+    assert result.steps[0].action["action"] == "type"
+    assert result.steps[-1].action["action"] == "click"
     assert result.steps[-1].note is not None
     assert "refused" in result.steps[-1].note

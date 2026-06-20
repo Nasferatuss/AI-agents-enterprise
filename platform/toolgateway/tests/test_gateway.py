@@ -33,6 +33,46 @@ async def test_allowlist_denies_without_executing():
     assert gw.audit[0].allowed is False  # denial is audited
 
 
+async def test_audit_sink_called_on_allowed_and_denied():
+    captured = []
+
+    gw = ToolGateway(audit_sink=captured.append)
+    gw.register(ToolSpec(name="echo", description="d"), _echo)
+
+    await gw.call("echo", {"v": 1}, allowlist={"echo"})  # allowed
+    await gw.call("echo", {"v": 2}, allowlist={"other"})  # denied by allowlist
+
+    assert len(captured) == 2  # sink fires for both allowed and denied
+    assert captured[0].tool == "echo" and captured[0].allowed is True
+    assert captured[1].allowed is False and captured[1].error == "tool not permitted"
+    # in-memory audit list is still populated alongside the sink (back-compat)
+    assert len(gw.audit) == 2
+
+
+async def test_denied_call_is_recorded_in_audit():
+    gw = ToolGateway()
+    gw.register(ToolSpec(name="danger", description="d"), _echo)
+
+    result = await gw.call("danger", {"v": 1}, allowlist={"safe"})
+
+    assert result.allowed is False
+    assert len(gw.audit) == 1
+    assert gw.audit[0].tool == "danger"
+    assert gw.audit[0].allowed is False
+    assert gw.audit[0].error == "tool not permitted"
+
+
+async def test_audit_sink_failure_does_not_break_call():
+    def boom_sink(_entry):
+        raise RuntimeError("sink down")
+
+    gw = ToolGateway(audit_sink=boom_sink)
+    gw.register(ToolSpec(name="echo", description="d"), _echo)
+
+    result = await gw.call("echo", {"v": 1})  # must not raise
+    assert result.allowed is True and result.output == {"echo": 1}
+
+
 async def test_unknown_tool():
     gw = ToolGateway()
     result = await gw.call("ghost", {})

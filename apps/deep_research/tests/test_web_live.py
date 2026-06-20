@@ -83,7 +83,7 @@ def _patch_live(monkeypatch):
         return httpx.Response(200, text=html, request=httpx.Request("GET", url))
 
     monkeypatch.setattr(web, "DDGS", _FakeDDGS)
-    monkeypatch.setattr(web.httpx, "get", _fake_get)
+    monkeypatch.setattr(web, "safe_get", _fake_get)
     web.BODY_CACHE.clear()
 
 
@@ -104,9 +104,29 @@ def test_live_fetch_bad_url_returns_empty(monkeypatch):
     def _boom(url, **kwargs):
         raise httpx.ConnectError("no network", request=httpx.Request("GET", url))
 
-    monkeypatch.setattr(web.httpx, "get", _boom)
-    out = web.fetch({"url": "https://nope.invalid/x"})
-    assert out == {"url": "https://nope.invalid/x", "title": "", "text": ""}
+    monkeypatch.setattr(web, "safe_get", _boom)
+    out = web.fetch({"url": "https://93.184.216.34/x"})
+    assert out == {"url": "https://93.184.216.34/x", "title": "", "text": ""}
+
+
+def test_live_fetch_rejects_metadata_and_localhost():
+    # Real safe_get guards SSRF: metadata IP (literal, no DNS) and loopback host.
+    web.BODY_CACHE.clear()
+    for bad in ("http://169.254.169.254/latest/meta-data/", "http://localhost:8000/admin"):
+        out = web.fetch({"url": bad})
+        assert out == {"url": bad, "title": "", "text": ""}
+        assert bad not in web.BODY_CACHE
+
+
+def test_body_cache_bounded():
+    from workbench_app_research.web import _BODY_CACHE_MAX
+
+    web.BODY_CACHE.clear()
+    for i in range(_BODY_CACHE_MAX + 50):
+        web.BODY_CACHE[f"https://example.com/{i}"] = {"title": "t", "text": "x"}
+    assert len(web.BODY_CACHE) == _BODY_CACHE_MAX
+    assert "https://example.com/0" not in web.BODY_CACHE  # oldest evicted
+    assert f"https://example.com/{_BODY_CACHE_MAX + 49}" in web.BODY_CACHE  # newest kept
 
 
 async def test_pipeline_cites_real_urls_with_live_connectors(monkeypatch):

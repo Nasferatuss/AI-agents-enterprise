@@ -16,12 +16,55 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from workbench_shared.config import get_settings
+from workbench_shared.config import Settings, get_settings
 from workbench_shared.logging import get_logger
 
 log = get_logger(__name__)
 
 _PROTECTED = "/v1"
+
+# Static headers stamped on every response (LOW-2). Cheap defence-in-depth for an
+# API: stop MIME sniffing, deny framing, and never leak the referrer. No CSP —
+# it brings no value to a JSON API and risks breaking the Swagger UI assets.
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+}
+
+
+class ProductionConfigError(RuntimeError):
+    """Raised at startup when env=prod is missing required security config."""
+
+
+def validate_production_security(settings: Settings) -> None:
+    """Fail-fast guard for production deployments (HIGH-2 / MED-1).
+
+    In ``dev``/``test`` this is a no-op so the local demo stays open. In ``prod``
+    an unauthenticated or wide-open gateway is a deployment mistake, not a valid
+    configuration, so we refuse to boot and say exactly which WB_ vars to set.
+    """
+    if settings.env != "prod":
+        return
+    missing: list[str] = []
+    if not settings.api_key:
+        missing.append("WB_API_KEY (gateway /v1/* auth)")
+    if not settings.approval_token:
+        missing.append("WB_APPROVAL_TOKEN (workflow approve/reject gate)")
+    if not settings.cors_origins or "*" in settings.cors_origins:
+        missing.append("WB_CORS_ORIGINS (explicit origin list, no '*')")
+    if missing:
+        raise ProductionConfigError(
+            "env=prod requires hardened security config; set: " + "; ".join(missing)
+        )
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        for name, value in _SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        return response
 
 
 class ApiKeyMiddleware(BaseHTTPMiddleware):

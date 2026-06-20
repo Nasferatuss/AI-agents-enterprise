@@ -7,6 +7,14 @@ Security boundary is built into the gateway, not bolted on:
   a denied tool is never executed;
 - **audit log**: every call (allowed or denied, with args, latency, error) is
   recorded — the governance artifact and the deep-research "trace".
+
+The in-memory `audit` list lives only as long as the gateway instance, which apps
+recreate per request — so by itself it is ephemeral. To make audit durable, pass an
+`audit_sink` callback: it is invoked for *every* allowed and denied call and can
+forward the entry into a persistent store (e.g. the observability trace store via a
+small helper there). The gateway never imports observability directly — that would
+create a toolgateway→observability dependency cycle — the sink is wired by the outer
+app/gateway layer instead.
 """
 
 import datetime
@@ -34,6 +42,10 @@ class _Registered:
 class ToolGateway:
     _tools: dict[str, _Registered] = field(default_factory=dict)
     audit: list[AuditEntry] = field(default_factory=list)
+    # Optional durable sink: called with every audit entry (allowed and denied) so an
+    # outer layer can persist governance audit beyond this short-lived instance. Kept
+    # separate from the in-memory `audit` list, which stays for tests / back-compat.
+    audit_sink: Callable[[AuditEntry], None] | None = None
 
     def register(self, spec: ToolSpec, handler: Connector) -> None:
         self._tools[spec.name] = _Registered(spec=spec, handler=handler)
@@ -42,16 +54,22 @@ class ToolGateway:
         return [t.spec for t in self._tools.values()]
 
     def _record(self, tool: str, args: dict, allowed: bool, error: str | None, ms: int) -> None:
-        self.audit.append(
-            AuditEntry(
-                tool=tool,
-                args=args,
-                allowed=allowed,
-                error=error,
-                latency_ms=ms,
-                at=datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
-            )
+        entry = AuditEntry(
+            tool=tool,
+            args=args,
+            allowed=allowed,
+            error=error,
+            latency_ms=ms,
+            at=datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds"),
         )
+        self.audit.append(entry)
+        if self.audit_sink is not None:
+            # The sink persists audit durably; a sink failure must never break the tool
+            # call (audit is telemetry / governance, not the critical path).
+            try:
+                self.audit_sink(entry)
+            except Exception as exc:  # noqa: BLE001 — audit persistence is best-effort
+                log.warning("audit_sink failed", tool=tool, error=str(exc))
 
     async def call(self, tool: str, args: dict, *, allowlist: set[str] | None = None) -> ToolResult:
         started = time.monotonic()

@@ -155,6 +155,41 @@ def test_transcript_renders_to_both_wire_formats():
     assert ant[2]["role"] == "user"
 
 
+def test_anthropic_merges_consecutive_tool_results_into_one_user_message():
+    # Parallel tool calls on a single step → two ToolResultMessages in a row.
+    # Anthropic requires them in ONE user message with multiple tool_result blocks
+    # (consecutive same-role messages are rejected).
+    transcript = [
+        UserMessage(content="do both"),
+        AssistantMessage(
+            content="",
+            tool_calls=[
+                ToolCall(id="t1", name="echo", arguments={"value": "a"}),
+                ToolCall(id="t2", name="echo", arguments={"value": "b"}),
+            ],
+        ),
+        ToolResultMessage(tool_call_id="t1", name="echo", content="echo:a"),
+        ToolResultMessage(tool_call_id="t2", name="echo", content="echo:b"),
+    ]
+
+    ant = to_anthropic_messages(transcript)
+
+    # user / assistant / user — the two tool results collapse into one user message.
+    assert [m["role"] for m in ant] == ["user", "assistant", "user"]
+    result_blocks = ant[2]["content"]
+    assert len(result_blocks) == 2
+    assert [b["tool_use_id"] for b in result_blocks] == ["t1", "t2"]
+    assert all(b["type"] == "tool_result" for b in result_blocks)
+
+
+def test_anthropic_merges_consecutive_user_messages():
+    transcript = [UserMessage(content="hi"), UserMessage(content="more")]
+    ant = to_anthropic_messages(transcript)
+    assert len(ant) == 1
+    assert ant[0]["role"] == "user"
+    assert [b["text"] for b in ant[0]["content"]] == ["hi", "more"]
+
+
 def test_wire_renderers_reject_non_transcript_items():
     # A ChatMessage (the /v1/chat type) is NOT a Transcript item. If one slips into
     # step(), both renderers must fail loudly rather than drop the user turn — which
@@ -173,3 +208,11 @@ def test_demo_calculator_is_safe():
     with pytest.raises(ValueError):
         calculator(CalculatorInput(expression="__import__('os').system('id')"))
     assert DEMO_AGENT.tool("calculator") is not None
+
+
+def test_demo_calculator_rejects_deeply_nested_expression():
+    # Deep AST nesting must be rejected with ValueError, not crash with
+    # RecursionError. Unary minus nests one BinOp/UnaryOp node per level.
+    deep = "-" * 200 + "1"
+    with pytest.raises(ValueError, match="too deep"):
+        calculator(CalculatorInput(expression=deep))

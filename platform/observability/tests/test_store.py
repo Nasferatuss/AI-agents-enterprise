@@ -1,6 +1,7 @@
 import pytest
 
 from workbench_observability import aggregates, get_trace, list_traces, record_trace
+from workbench_observability.schema import FailureBucket
 from workbench_observability.store import safe_record
 
 
@@ -76,6 +77,53 @@ async def test_aggregates_and_failure_taxonomy(trace_db):
     assert agg.total_cost_usd == pytest.approx(0.052)
     assert agg.by_kind == {"agent": 1, "workflow": 1, "eval": 1}
     assert agg.failures == [type(agg.failures[0])(kind="workflow", status="failed", count=1)]
+
+
+async def test_aggregates_sql_refactor_regression(trace_db):
+    # Mixed kinds, statuses and latencies — verifies the SQL-pushed-down counts,
+    # cost sum, by_kind grouping, failure taxonomy ordering, and sqlite p95 fallback.
+    latencies = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    for i, lat in enumerate(latencies):
+        await record_trace(
+            kind="agent",
+            name=f"a{i}",
+            status="completed",
+            latency_ms=lat,
+            cost_usd=0.001,
+            payload={},
+        )
+    # two failure buckets, with workflow/failed appearing twice (most common first)
+    await record_trace(kind="workflow", name="w1", status="failed", error="x", payload={})
+    await record_trace(kind="workflow", name="w2", status="failed", error="y", payload={})
+    await record_trace(kind="eval", name="e1", status="error", error="z", payload={})
+
+    agg = await aggregates()
+    assert agg.total == 13
+    assert agg.success_rate == pytest.approx(10 / 13)
+    assert agg.total_cost_usd == pytest.approx(0.01)  # 10 * 0.001
+    assert agg.by_kind == {"agent": 10, "workflow": 2, "eval": 1}
+    # sqlite p95 fallback: index = min(9, int(10 * 0.95)) over 10 agent + 3 zero latencies
+    # 13 latencies sorted: 0,0,0,10,20,...,100 ; idx = int(13*0.95)=12 → 100
+    assert agg.p95_latency_ms == 100
+    assert agg.failures[0] == FailureBucket(kind="workflow", status="failed", count=2)
+    assert FailureBucket(kind="eval", status="error", count=1) in agg.failures
+
+
+async def test_record_tool_audit_persists_denied_and_allowed(trace_db):
+    from workbench_observability.store import record_tool_audit
+
+    await record_tool_audit(
+        {"tool": "web_search", "args": {"q": "x"}, "allowed": True, "latency_ms": 5, "at": "t"}
+    )
+    await record_tool_audit(
+        {"tool": "danger", "args": {}, "allowed": False, "error": "denied", "at": "t"}
+    )
+
+    traces = await list_traces(kind="tool")
+    by_name = {t.name: t for t in traces}
+    assert by_name["web_search"].status == "completed"
+    assert by_name["danger"].status == "denied"
+    assert by_name["danger"].error == "denied"
 
 
 async def test_safe_record_swallows_errors(trace_db, monkeypatch):

@@ -9,6 +9,7 @@ row_count) without persisting the row contents.
 import json
 
 from workbench_observability import safe_record
+from workbench_runtime._util import extract_json
 from workbench_runtime.types import AgentRun
 
 
@@ -16,13 +17,7 @@ def _scrub_payload(payload: dict) -> dict:
     """Redact raw `rows` from tool-result JSON in the serialized run."""
     for step in payload.get("steps", []):
         for execution in step.get("tool_executions", []):
-            result = execution.get("result")
-            if not isinstance(result, str):
-                continue
-            try:
-                parsed = json.loads(result)
-            except (json.JSONDecodeError, TypeError):
-                continue
+            parsed = extract_json(execution.get("result"))
             if isinstance(parsed, dict) and "rows" in parsed:
                 n = len(parsed["rows"]) if isinstance(parsed["rows"], list) else 0
                 parsed["rows"] = f"[redacted: {n} rows]"

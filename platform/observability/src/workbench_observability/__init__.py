@@ -6,6 +6,7 @@ from workbench_observability.store import (
     aggregates,
     get_trace,
     list_traces,
+    record_tool_audit,
     record_trace,
     safe_record,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "get_trace",
     "init_db",
     "list_traces",
+    "record_tool_audit",
     "record_trace",
     "reset_engine",
     "safe_record",

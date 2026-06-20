@@ -11,19 +11,38 @@ the real text it already retrieved without a second network round-trip.
 """
 
 import re
+from collections import OrderedDict
 
-import httpx
 from bs4 import BeautifulSoup
 from ddgs import DDGS
 
 from workbench_shared.logging import get_logger
+from workbench_shared.netguard import UnsafeUrlError, safe_get
 from workbench_toolgateway import ToolGateway, ToolSpec
 
 log = get_logger(__name__)
 
+_BODY_CACHE_MAX = 256
+
+
+class _BoundedBodyCache(OrderedDict):
+    """dict-compatible LRU so a long-lived process can't leak memory.
+
+    Keeps the most recently fetched ``_BODY_CACHE_MAX`` bodies; older entries are
+    evicted FIFO. ``research.py`` uses it as a plain dict (``in`` / ``[url]``).
+    """
+
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        while len(self) > _BODY_CACHE_MAX:
+            self.popitem(last=False)
+
+
 # url -> {"title", "text"} for bodies fetched this process; read by research.py's
-# report step (the live analogue of the corpus lookup).
-BODY_CACHE: dict[str, dict[str, str]] = {}
+# report step (the live analogue of the corpus lookup). Bounded to cap memory.
+BODY_CACHE: "OrderedDict[str, dict[str, str]]" = _BoundedBodyCache()
 
 _MAX_TEXT = 8000
 _TIMEOUT = 10.0
@@ -80,14 +99,14 @@ def fetch(args: dict) -> dict:
     if not url:
         return {"url": url, "title": "", "text": ""}
     try:
-        resp = httpx.get(
-            url,
-            timeout=_TIMEOUT,
-            follow_redirects=True,
-            headers={"User-Agent": _USER_AGENT},
-        )
+        # safe_get validates the initial URL and every redirect hop against the
+        # SSRF guard (no private/loopback/metadata targets), and manages redirects.
+        resp = safe_get(url, timeout=_TIMEOUT, headers={"User-Agent": _USER_AGENT})
         resp.raise_for_status()
         title, text = _extract(resp.text)
+    except UnsafeUrlError as exc:
+        log.warning("live fetch failed", url=url, error=f"unsafe url: {exc}")
+        return {"url": url, "title": "", "text": ""}
     except Exception as exc:  # noqa: BLE001 — surface a usable result, not a crash
         log.warning("live fetch failed", url=url, error=str(exc))
         return {"url": url, "title": "", "text": ""}

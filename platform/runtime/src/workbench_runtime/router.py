@@ -40,6 +40,11 @@ log = get_logger(__name__)
 
 Candidate = tuple[str, str]  # (provider name, model role) — resolved against the registry
 
+# After a provider fails with a network/timeout error we mark it unhealthy for a
+# short cooldown and skip it in the chain — so a dead local box isn't retried on
+# every single request. Kept short; tests monkeypatch this to 0 to avoid flakes.
+_HEALTH_COOLDOWN_S = 30.0
+
 
 class NoProviderAvailableError(Exception):
     def __init__(self, complexity: Complexity, attempts: list[str]):
@@ -59,6 +64,15 @@ class ModelRouter:
         self.registry = registry if registry is not None else build_registry()
         self._http = http or httpx.AsyncClient()
         self._anthropic = anthropic_client  # lazily created: needs ANTHROPIC_API_KEY
+        self._unhealthy_until: dict[str, float] = {}  # provider name → monotonic deadline
+
+    def _is_healthy(self, provider_name: str) -> bool:
+        deadline = self._unhealthy_until.get(provider_name)
+        return deadline is None or time.monotonic() >= deadline
+
+    def _mark_unhealthy(self, provider_name: str) -> None:
+        if _HEALTH_COOLDOWN_S > 0:
+            self._unhealthy_until[provider_name] = time.monotonic() + _HEALTH_COOLDOWN_S
 
     def chain(self, complexity: Complexity) -> list[Candidate]:
         """Ordered (provider, model-role) candidates; disabled providers filtered out."""
@@ -88,7 +102,12 @@ class ModelRouter:
         """One model turn with fallback across the complexity chain."""
         tools = tools or []
         attempts: list[str] = []
-        for provider_name, role in self.chain(complexity):
+        chain = self.chain(complexity)
+        # Prefer healthy providers, but never end up with nothing to try: if the
+        # whole chain is in cooldown, fall back to the full chain (the box may be
+        # back). Order within each group is preserved.
+        candidates = [c for c in chain if self._is_healthy(c[0])] or chain
+        for provider_name, role in candidates:
             provider = self.registry[provider_name]
             model = provider.models[role]
             started = time.monotonic()
@@ -110,9 +129,12 @@ class ModelRouter:
                     )
             except ProviderCallError as exc:
                 attempts.append(f"{provider_name}/{model}")
+                self._mark_unhealthy(provider_name)
                 log.warning("provider failed, falling back", error=str(exc))
                 continue
 
+            # Success → provider is healthy again; clear any stale cooldown.
+            self._unhealthy_until.pop(provider_name, None)
             out.provider = provider_name
             out.model = model
             out.latency_ms = int((time.monotonic() - started) * 1000)

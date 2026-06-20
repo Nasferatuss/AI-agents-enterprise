@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import re
 from typing import Any
 
 from playwright.async_api import Browser, Page, Playwright, async_playwright
@@ -29,6 +30,7 @@ from pydantic import BaseModel
 
 from workbench_runtime.router import ModelRouter, NoProviderAvailableError
 from workbench_runtime.types import UserMessage
+from workbench_shared.netguard import UnsafeUrlError, assert_public_url
 
 # Keep the model prompt small and the loop bounded.
 _MAX_STEPS = 7
@@ -49,6 +51,24 @@ _UNSAFE_TOKENS = (
     "confirm order",
     "delete account",
 )
+
+# Field markers that indicate a `type` action is entering sensitive data (card
+# numbers, CVV, passwords, etc.) into the page. Matched against the action's
+# selector / field text.
+_SENSITIVE_FIELD_TOKENS = (
+    "card",
+    "cc-number",
+    "cardnumber",
+    "cvv",
+    "cvc",
+    "iban",
+    "password",
+    "passwd",
+    "ssn",
+)
+
+# Strip separators commonly found in entered card numbers before length check.
+_DIGIT_RUN = re.compile(r"[\s\-]")
 
 _SYSTEM = (
     "You are a careful web agent driving a real headless browser toward a goal. "
@@ -234,10 +254,45 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
     return None
 
 
-def _is_unsafe(action: dict[str, Any]) -> bool:
-    """Refuse obvious payment/checkout/destructive submits (safety boundary)."""
+def _looks_like_card_number(value: str) -> bool:
+    """True if `value` is a bare 13–19 digit run (typical PAN length)."""
+    digits = _DIGIT_RUN.sub("", value)
+    return digits.isdigit() and 13 <= len(digits) <= 19
+
+
+def _is_sensitive_type(action: dict[str, Any]) -> bool:
+    """True if a `type` action puts sensitive data into a sensitive-looking field."""
+    if str(action.get("action")) != "type":
+        return False
+    selector = str(action.get("selector", ""))
+    name = str(action.get("name", ""))
+    placeholder = str(action.get("placeholder", ""))
+    field = f"{selector} {name} {placeholder}".lower()
+    if any(tok in field for tok in _SENSITIVE_FIELD_TOKENS):
+        return True
+    return _looks_like_card_number(str(action.get("text", "")))
+
+
+def _is_unsafe(action: dict[str, Any], *, sensitive_entered: bool = False) -> bool:
+    """Refuse destructive/transactional submits and sensitive-data exfiltration.
+
+    Two layers of defence:
+      1. Obvious pay/checkout/delete/purchase keywords in any action field.
+      2. Once sensitive data has been entered (`sensitive_entered` — raised by the
+         caller when a `type` action matches ``_is_sensitive_type``), ANY subsequent
+         submit/button click is blocked — even a neutral "Continue"/"Next" — so a
+         multi-step `type → click` cannot smuggle the submission past the keyword
+         filter.
+    """
     blob = " ".join(str(v) for v in action.values()).lower()
-    return any(tok in blob for tok in _UNSAFE_TOKENS)
+    if any(tok in blob for tok in _UNSAFE_TOKENS):
+        return True
+    # After sensitive entry, block any click. The model only hands us a CSS selector
+    # (often an opaque id like `#continue` that hides the element's true nature), so a
+    # selector-token heuristic is trivially bypassed; the conservative rule is to refuse
+    # every click once a card/cvv/password has been typed. Navigation away (the navigate
+    # action) stays allowed.
+    return sensitive_entered and str(action.get("action")) == "click"
 
 
 async def run_browse(
@@ -253,6 +308,30 @@ async def run_browse(
     completed = False
     provider: str | None = None
     cost_usd: float | None = None
+    sensitive_entered = False
+
+    # SSRF guard: validate the start URL before launching a browser or navigating.
+    # A prompt-injected / hostile start URL pointing at loopback, RFC-1918, or the
+    # cloud metadata endpoint (169.254.169.254) must never be opened.
+    try:
+        assert_public_url(url)
+    except UnsafeUrlError as exc:
+        steps.append(
+            BrowseStep(
+                observation_summary=f"(not opened) {url}",
+                action={"action": "navigate", "url": url},
+                note=f"refused: unsafe start url blocked by safety policy: {exc}",
+            )
+        )
+        return BrowseResult(
+            url=url,
+            goal=goal,
+            steps=steps,
+            answer=f"Refused to open unsafe URL: {exc}",
+            completed=False,
+            provider=provider,
+            cost_usd=cost_usd,
+        )
 
     session = await LiveBrowseSession.create()
     try:
@@ -306,12 +385,12 @@ async def run_browse(
                 steps.append(BrowseStep(observation_summary=summary, action=action))
                 break
 
-            if _is_unsafe(action):
+            if _is_unsafe(action, sensitive_entered=sensitive_entered):
                 steps.append(
                     BrowseStep(
                         observation_summary=summary,
                         action=action,
-                        note="refused: payment/destructive action blocked by safety policy",
+                        note="refused: payment/sensitive/destructive action blocked by policy",
                     )
                 )
                 break
@@ -323,10 +402,16 @@ async def run_browse(
                     await session.click(str(action.get("selector", "")))
                 elif kind == "type":
                     await session.type(str(action.get("selector", "")), str(action.get("text", "")))
+                    # Track sensitive input so a later neutral submit/click is blocked.
+                    if _is_sensitive_type(action):
+                        sensitive_entered = True
                 elif kind == "navigate":
                     target = str(action.get("url", ""))
-                    if not target.startswith(("http://", "https://")):
-                        note = f"refused navigate to non-http(s) url: {target}"
+                    try:
+                        assert_public_url(target)
+                    except UnsafeUrlError as exc:
+                        note = f"refused: unsafe navigate blocked by safety policy: {exc}"
+                        stop = True
                     else:
                         await session.navigate(target)
                 else:

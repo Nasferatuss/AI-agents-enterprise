@@ -29,6 +29,7 @@ from workbench_app_text2sql.agent import get_engine
 from workbench_app_text2sql.safe_sql import MAX_ROWS, SqlGuardError, execute_sql
 from workbench_app_text2sql.schema import reflect_tables, schema_description
 from workbench_runtime.tools import Tool
+from workbench_shared.netguard import UnsafeUrlError, assert_public_url
 
 _MAX_SEARCH_RESULTS = 5
 _MAX_FILE_BYTES = 100_000
@@ -56,6 +57,12 @@ class FetchUrlInput(BaseModel):
 
 
 def _fetch_url(inp: FetchUrlInput) -> str:
+    try:
+        assert_public_url(inp.url)
+    except UnsafeUrlError as exc:
+        # SSRF guard: refuse private/loopback/metadata targets and non-http(s)
+        # schemes. Return the message so the agent self-corrects instead of crashing.
+        return f"rejected: {exc}"
     result = web.fetch({"url": inp.url})
     text = result.get("text", "")
     if not text:
@@ -134,6 +141,15 @@ def _safe_path(name: str) -> Path:
     resolved = (root / candidate).resolve()
     if resolved != root and root not in resolved.parents:
         raise ValueError(f"path escapes the workspace sandbox: {name}")
+    # Defense in depth against symlink escape: even if a symlink was planted in
+    # the workspace (by an operator, a bind-mount, or CI), the *real* path must
+    # still live under the *real* root, and we refuse to follow a final symlink.
+    real_root = os.path.realpath(root)
+    real_target = os.path.realpath(resolved)
+    if real_target != real_root and not real_target.startswith(real_root + os.sep):
+        raise ValueError(f"path escapes the workspace sandbox (symlink): {name}")
+    if resolved.is_symlink() or os.path.islink(resolved):
+        raise ValueError(f"symlinks are not allowed in the workspace: {name}")
     return resolved
 
 
