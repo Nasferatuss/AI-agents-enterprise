@@ -24,6 +24,28 @@ Moving the demo-grade seams to real backends, plus the deploy-gating controls.
   are now ingested into the concept pages with provenance and one flagged
   contradiction (`wiki/concepts/`).
 
+### Hardening 2026-06-20 (post-review)
+
+Acted on a multi-agent code/security/architecture/product review.
+
+- **Security** — SSRF guard (`workbench_shared.netguard`) on every agent-driven
+  fetch (autonomous, deep-research, live-browse): blocks private/loopback/
+  link-local/metadata targets and re-validates each redirect hop. File sandbox
+  hardened against symlink escape. Live-browse blocks submit after sensitive
+  input (the type-then-Continue bypass). Prod fail-fast when auth/CORS unset;
+  security headers; AST depth cap; Postgres password parameterized.
+- **Architecture (ADR-010)** — durable run store (`agent_runs` + Alembic 0002):
+  workflow HITL runs survive a gateway restart; async run model for the
+  autonomous flagship (`POST /runs → 202`, poll `GET /runs/{id}`); Idempotency-Key
+  on expensive submissions; router circuit-breaker + 429 backoff.
+- **Governance** — the Tool Gateway audit sink is wired to persist every tool
+  call (allowed and denied) to the trace store.
+- **Product** — published cost-aware routing benchmark (`docs/benchmarks.md`,
+  `make bench`) with a real live run (33% cost cut on a mixed workload); README
+  repositioned (production-style reference platform; modules grouped by depth).
+- **Tests** — fixed a CI gap (the autonomous flagship's tests were missing from
+  `testpaths`); suite now 266 passed, network-free, ruff clean.
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

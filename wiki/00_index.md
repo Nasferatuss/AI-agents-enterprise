@@ -96,6 +96,7 @@ audit); scenario runner → bug report. Страница `/qa`. v0 = вирту�
 - [[adr-007-predictable-orchestration]]
 - [[adr-008-model-router-design]]
 - [[adr-009-deployment-topology]]
+- [[adr-010-durable-async-runs]] — durable run store, async run-модель, idempotency (hardening 2026-06-20)
 
 ## Планирование
 - [[phases-and-sprints]] — Discovery → Design → Dev (Sprint 0–10) → QA → Launch → Post-Launch
