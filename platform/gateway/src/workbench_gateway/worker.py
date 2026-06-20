@@ -11,12 +11,13 @@ does work when ``WB_JOB_BACKEND=redis``.
 """
 
 import asyncio
+import contextlib
 
 from workbench_jobs import get_queue
 from workbench_jobs.queue import RedisQueue
 
 import workbench_gateway.app  # noqa: F401 — import side effect: registers app handlers
-from workbench_gateway.reconcile import reconcile_runs
+from workbench_gateway.reconcile import reconcile_runs, run_sweeper
 from workbench_observability import init_db
 from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger
@@ -39,10 +40,17 @@ async def _main() -> None:
         return
     await queue.reclaim()  # recover jobs orphaned in the processing list
     await reconcile_runs(queue)  # recover runs orphaned in the durable store
+    sweeper = asyncio.create_task(  # fail runs that hang without a heartbeat
+        run_sweeper(settings.run_sweep_interval_s, settings.run_stuck_ttl_s)
+    )
     try:
         await queue.consume_forever()
     except asyncio.CancelledError:  # graceful shutdown (SIGTERM)
         log.info("job worker stopped")
+    finally:
+        sweeper.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await sweeper
 
 
 def main() -> None:

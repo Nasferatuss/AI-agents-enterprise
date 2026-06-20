@@ -67,6 +67,18 @@ Acted on a multi-agent code/security/architecture/product review.
   `--concurrency N`) closing the "proof under load" gap; honest "provider health
   cooldown" naming (it is not a full circuit breaker); README test count unified.
 
+### Hardening round 3 (2026-06-20, the residual backlog)
+
+- **Hung runs** — a heartbeat (`touch_run` bumps `updated_at` during a run) + a
+  periodic sweeper (`run_sweeper`) that fails runs idle past `WB_RUN_STUCK_TTL_S`;
+  catches a worker that hangs without crashing.
+- **Effectively-once** — the autonomous handler skips a run that already reached a
+  terminal state, so at-least-once re-delivery doesn't redo finished (costly) work.
+- **Reverse-proxy rate limiting** — `WB_TRUST_PROXY_HEADERS` lets the limiter bucket
+  by `X-Forwarded-For` behind a trusted proxy (spoof-safe: off by default).
+- **Qdrant auth** — `WB_QDRANT_API_KEY` (compose `QDRANT__SERVICE__API_KEY` + client),
+  matching the Redis password support.
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

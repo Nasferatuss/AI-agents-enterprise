@@ -1,5 +1,7 @@
 """FastAPI application factory for the API Gateway."""
 
+import asyncio
+import contextlib
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -36,18 +38,29 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001 — trace store is best-effort, never blocks boot
         log.warning("trace store init failed; tracing disabled", error=str(exc))
     # In-process backend: this gateway executes jobs itself, so on (re)start it must
-    # recover runs orphaned by the previous process. With the Redis backend the
-    # dedicated worker owns reconciliation instead (avoid double re-enqueue).
-    if get_settings().job_backend == "inprocess":
+    # recover runs orphaned by the previous process and sweep hung ones. With the
+    # Redis backend the dedicated worker owns both (avoid double re-enqueue).
+    sweeper: asyncio.Task | None = None
+    settings = get_settings()
+    if settings.job_backend == "inprocess":
         try:
             from workbench_jobs import get_queue
 
-            from workbench_gateway.reconcile import reconcile_runs
+            from workbench_gateway.reconcile import reconcile_runs, run_sweeper
 
             await reconcile_runs(get_queue())
+            sweeper = asyncio.create_task(
+                run_sweeper(settings.run_sweep_interval_s, settings.run_stuck_ttl_s)
+            )
         except Exception as exc:  # noqa: BLE001 — recovery is best-effort, never blocks boot
-            log.warning("run reconciliation failed", error=str(exc))
-    yield
+            log.warning("run recovery setup failed", error=str(exc))
+    try:
+        yield
+    finally:
+        if sweeper is not None:
+            sweeper.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await sweeper
 
 
 def create_app() -> FastAPI:

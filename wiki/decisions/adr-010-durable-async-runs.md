@@ -65,12 +65,20 @@ operational persistence, родственная трейсам; observability у
      (`awaiting_approval`) НЕ трогается (ждёт человека, не переисполнения).
    - **Безопасность очереди**: `Job.kind`/`run_id` валидируются паттерном, `dispatch`
      исполняет только *зарегистрированные* kinds; Redis за `WB_REDIS_PASSWORD`.
+   - **Heartbeat + sweeper**: handler бьёт `updated_at` (`touch_run`) пока жив;
+     фоновый `run_sweeper` помечает `running` старше `WB_RUN_STUCK_TTL_S` как `failed`
+     — ловит зависший (не упавший) воркер. Запускается в gateway lifespan (inprocess)
+     или воркере (redis).
+   - **Effectively-once**: handler идемпотентен — re-delivery уже терминального run-а
+     (reclaim/reconcile) пропускается без повторной работы. Это не true exactly-once
+     (run, упавший mid-flight, переисполнится), но дорогая работа над завершёнными
+     run-ами не дублируется.
 
-**Граница:** теперь at-least-once + reconciler + race-safe idempotency. Чего ещё НЕ
-делаем: heartbeat/lease с авто-fail зависших `running`, exactly-once,
-scheduling/result-TTL и версионирование payload уровня Temporal/arq — для этого
-взяли бы готовый фреймворк, если появится продовый объём. Worker'ы stateless,
-состояние run-ов — в durable store.
+**Граница:** at-least-once + reconciler + race-safe idempotency + heartbeat/sweeper +
+effectively-once. Чего ещё НЕ делаем (намеренно): true exactly-once с partial-result
+checkpointing, scheduling/result-TTL и версионирование payload уровня Temporal/arq —
+для этого взяли бы готовый фреймворк, если появится продовый объём. Worker'ы
+stateless, состояние run-ов — в durable store.
 
 **Связи:** [[adr-006-custom-trace-schema]] · [[adr-007-predictable-orchestration]]
 (HITL gates) · [[observability]] · [[service-oriented-core]] (Agent Runtime)

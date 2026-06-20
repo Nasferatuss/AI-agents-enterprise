@@ -84,10 +84,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._hits: dict[str, deque[float]] = defaultdict(deque)
 
+    @staticmethod
+    def _client_ip(request: Request) -> str:
+        # Behind a trusted proxy the socket peer is the proxy, so bucket by the real
+        # client from X-Forwarded-For instead — but ONLY when explicitly trusted,
+        # since the header is client-controlled and would otherwise be spoofable.
+        if get_settings().trust_proxy_headers:
+            fwd = request.headers.get("x-forwarded-for")
+            if fwd:
+                return fwd.split(",")[0].strip()
+        return request.client.host if request.client else "anon"
+
     async def dispatch(self, request: Request, call_next):
         limit = get_settings().rate_limit_per_min
         if limit and request.method == "POST" and request.url.path.startswith(_PROTECTED):
-            client = request.client.host if request.client else "anon"
+            client = self._client_ip(request)
             now = time.monotonic()
             window = self._hits[client]
             while window and now - window[0] > 60:

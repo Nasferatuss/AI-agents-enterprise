@@ -25,16 +25,28 @@ class Settings(BaseSettings):
     # WB_RATE_LIMIT_PER_MIN: when > 0, cap POST /v1/* per client IP per minute.
     api_key: str = ""
     rate_limit_per_min: int = 0
+    # Behind a reverse proxy the socket peer is the proxy, so the rate limiter would
+    # bucket every client together. Set WB_TRUST_PROXY_HEADERS=true ONLY when a trusted
+    # proxy sets X-Forwarded-For (else a client could spoof it to dodge the limit).
+    trust_proxy_headers: bool = False
 
     # Storage
     postgres_dsn: str = "postgresql://workbench:workbench@localhost:5432/workbench"
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
+    # Qdrant API key — empty = no auth (local demo). Set in any non-local environment
+    # (the compose qdrant service reads the same value as QDRANT__SERVICE__API_KEY).
+    qdrant_api_key: str = ""
 
     # Background jobs (async run model). "inprocess" (default) runs jobs as asyncio
     # tasks in the gateway; "redis" enqueues to Redis for a separate worker process
     # (`python -m workbench_gateway.worker`) — the horizontally-scalable path.
     job_backend: Literal["inprocess", "redis"] = "inprocess"
+    # Crash recovery for "running" runs that stop heartbeating: a sweeper marks a run
+    # failed if its updated_at is older than the TTL (a hung worker that never crashes
+    # nor finishes). The handler heartbeats updated_at while genuinely alive.
+    run_stuck_ttl_s: int = 900  # 15 min without a heartbeat → considered dead
+    run_sweep_interval_s: int = 120  # how often the sweeper checks
 
     # Model routing (ADR-003 hybrid local/API split + ADR-008 router).
     # API keys use standard env names (ANTHROPIC_API_KEY, OPENAI_API_KEY,

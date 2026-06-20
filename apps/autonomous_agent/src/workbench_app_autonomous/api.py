@@ -12,6 +12,8 @@ Exposes the plan→act→reflect→repeat engine (agent.py) over HTTP, two ways:
   from any replica, not just the one that accepted the request.
 """
 
+import asyncio
+import contextlib
 import time
 import uuid
 from typing import Annotated
@@ -26,6 +28,7 @@ from workbench_observability import (
     get_run,
     get_run_by_idempotency_key,
     safe_record,
+    touch_run,
     upsert_run,
 )
 from workbench_runtime import get_router
@@ -34,6 +37,8 @@ from workbench_runtime.router import NoProviderAvailableError
 router = APIRouter(prefix="/v1/apps/autonomous", tags=["autonomous-agent"])
 
 _KIND = "autonomous"
+_TERMINAL_STATUSES = {"completed", "max_steps_reached", "failed"}
+_HEARTBEAT_INTERVAL_S = 30.0
 
 
 class RunRequest(BaseModel):
@@ -77,33 +82,56 @@ async def run(req: RunRequest) -> AutonomousResult:
     return result
 
 
+async def _heartbeat(run_id: str, interval: float) -> None:
+    """Bump the run's updated_at while it works, so the stuck-run sweeper can tell a
+    live (slow) run from a hung one. Cancelled when the run finishes."""
+    try:
+        while True:
+            await asyncio.sleep(interval)
+            await touch_run(run_id)
+    except asyncio.CancelledError:
+        pass
+
+
 async def _execute_run(run_id: str, goal: str) -> None:
     """Background worker: run the agent and persist terminal state. Never raises."""
+    # Effectively-once: at-least-once delivery can re-deliver a run (reclaim, a
+    # reconcile re-enqueue). If it already finished, don't redo the costly work.
+    existing = await get_run(run_id)
+    if existing is not None and existing.status in _TERMINAL_STATUSES:
+        return
+
     started = time.monotonic()
     await upsert_run(run_id=run_id, kind=_KIND, status="running", payload={"goal": goal})
+    heartbeat = asyncio.create_task(_heartbeat(run_id, _HEARTBEAT_INTERVAL_S))
     try:
-        result = await run_autonomous(get_router(), goal)
-    except Exception as exc:  # noqa: BLE001 — a background run must record failure, not crash
+        try:
+            result = await run_autonomous(get_router(), goal)
+        except Exception as exc:  # noqa: BLE001 — a background run records failure, not crash
+            await upsert_run(
+                run_id=run_id, kind=_KIND, status="failed", payload={"goal": goal}, error=str(exc)
+            )
+            return
+        status = "completed" if result.completed else "max_steps_reached"
         await upsert_run(
-            run_id=run_id, kind=_KIND, status="failed", payload={"goal": goal}, error=str(exc)
+            run_id=run_id,
+            kind=_KIND,
+            status=status,
+            payload={"goal": goal, "result": result.model_dump()},
         )
-        return
-    status = "completed" if result.completed else "max_steps_reached"
-    await upsert_run(
-        run_id=run_id,
-        kind=_KIND,
-        status=status,
-        payload={"goal": goal, "result": result.model_dump()},
-    )
-    await safe_record(
-        kind="agent",
-        name="autonomous_agent",
-        status=status,
-        latency_ms=int((time.monotonic() - started) * 1000),
-        cost_usd=result.cost_usd,
-        num_steps=len(result.iterations),
-        payload=result.model_dump(),
-    )
+        await safe_record(
+            kind="agent",
+            name="autonomous_agent",
+            status=status,
+            latency_ms=int((time.monotonic() - started) * 1000),
+            cost_usd=result.cost_usd,
+            num_steps=len(result.iterations),
+            payload=result.model_dump(),
+        )
+    finally:
+        heartbeat.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await heartbeat
 
 
 async def _autonomous_job(run_id: str, payload: dict) -> None:

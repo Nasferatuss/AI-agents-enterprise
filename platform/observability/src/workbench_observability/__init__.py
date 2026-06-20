@@ -7,6 +7,8 @@ from workbench_observability.runs import (
     get_run_by_idempotency_key,
     list_nonterminal_runs,
     list_runs,
+    sweep_stuck_runs,
+    touch_run,
     upsert_run,
 )
 from workbench_observability.schema import (
@@ -42,5 +44,7 @@ __all__ = [
     "record_trace",
     "reset_engine",
     "safe_record",
+    "sweep_stuck_runs",
+    "touch_run",
     "upsert_run",
 ]

@@ -90,6 +90,23 @@ async def test_idempotent_submit_dedupes(run_store, monkeypatch):
     assert calls["n"] == 2
 
 
+async def test_execute_run_skips_already_terminal(run_store, monkeypatch):
+    from workbench_observability import upsert_run
+
+    calls = {"n": 0}
+
+    async def fake_run(router, goal):
+        calls["n"] += 1
+        return _fake_result(goal)
+
+    monkeypatch.setattr(api, "run_autonomous", fake_run)
+    # A run re-delivered by reclaim/reconcile that already finished must NOT be redone
+    # (effectively-once: at-least-once delivery + idempotent handler).
+    await upsert_run(run_id="done", kind="autonomous", status="completed", payload={"goal": "x"})
+    await api._execute_run("done", "x")
+    assert calls["n"] == 0
+
+
 async def test_failed_run_records_error(run_store, monkeypatch):
     async def boom(router, goal):
         raise RuntimeError("provider exploded")

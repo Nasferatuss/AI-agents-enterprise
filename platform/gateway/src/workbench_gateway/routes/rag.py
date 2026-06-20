@@ -25,7 +25,10 @@ _COLLECTION_PREFIX = "rag_"
 
 @lru_cache
 def _qdrant() -> AsyncQdrantClient:
-    return AsyncQdrantClient(url=get_settings().qdrant_url)
+    # api_key authenticates to a secured Qdrant; None (empty config) = no auth, the
+    # local-demo default. Set WB_QDRANT_API_KEY + QDRANT__SERVICE__API_KEY in prod.
+    settings = get_settings()
+    return AsyncQdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key or None)
 
 
 def get_pipeline(index: str) -> RagPipeline:

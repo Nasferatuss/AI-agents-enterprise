@@ -11,9 +11,11 @@ terminal-state writes make that safe. Used by both the gateway lifespan (in-proc
 backend) and the Redis worker.
 """
 
+import asyncio
+
 from workbench_jobs import Job, registered_kinds
 
-from workbench_observability import list_nonterminal_runs
+from workbench_observability import list_nonterminal_runs, sweep_stuck_runs
 from workbench_shared.logging import get_logger
 
 log = get_logger(__name__)
@@ -31,3 +33,12 @@ async def reconcile_runs(queue) -> int:
     if n:
         log.info("reconciled orphaned runs", count=n)
     return n
+
+
+async def run_sweeper(interval_s: int, ttl_s: int) -> None:
+    """Periodically fail runs that stopped heartbeating (a hung worker that neither
+    crashed nor finished). Loops until cancelled; idempotent, so it's safe even if
+    more than one replica runs it."""
+    while True:
+        await asyncio.sleep(interval_s)
+        await sweep_stuck_runs(ttl_s)

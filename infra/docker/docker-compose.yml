@@ -39,6 +39,10 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.13.4
+    # Empty API key = no auth (local demo). Set WB_QDRANT_API_KEY in any non-local
+    # environment; the api service passes the same value as its client api_key.
+    environment:
+      QDRANT__SERVICE__API_KEY: ${WB_QDRANT_API_KEY:-}
     ports:
       - "${WB_QDRANT_HOST_PORT:-6333}:6333"
       - "${WB_QDRANT_GRPC_HOST_PORT:-6334}:6334"
@@ -58,6 +62,7 @@ services:
       WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
       WB_REDIS_URL: redis://:${WB_REDIS_PASSWORD:-}@redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
+      WB_QDRANT_API_KEY: ${WB_QDRANT_API_KEY:-}
       # async run model: "inprocess" (default; the api runs jobs itself) or "redis"
       # (enqueue to Redis → the `worker` service below executes them). For the redis
       # path, bring up the worker: docker compose --profile redis-jobs up.
@@ -94,6 +99,7 @@ services:
       WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
       WB_REDIS_URL: redis://:${WB_REDIS_PASSWORD:-}@redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
+      WB_QDRANT_API_KEY: ${WB_QDRANT_API_KEY:-}
     volumes:
       - ../../agent_workspace:/app/data/agent_workspace
     depends_on:

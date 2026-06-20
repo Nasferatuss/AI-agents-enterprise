@@ -181,6 +181,49 @@ async def list_runs(kind: str | None = None, limit: int = 200) -> list[RunRecord
         return []
 
 
+async def touch_run(run_id: str) -> None:
+    """Heartbeat: bump ``updated_at`` so the stuck-run sweeper knows this run is alive.
+    A long-running handler calls this periodically while it works."""
+    try:
+        async with get_sessionmaker()() as session:
+            row = await session.get(AgentRun, run_id)
+            if row is not None:
+                row.updated_at = _utc_now()
+                await session.commit()
+    except Exception as exc:  # noqa: BLE001 — a missed heartbeat must not break the run
+        log.warning("run heartbeat failed", run_id=run_id, error=str(exc))
+
+
+async def sweep_stuck_runs(ttl_seconds: int) -> int:
+    """Fail `running` runs whose heartbeat (``updated_at``) is older than the TTL.
+
+    Catches a worker that hung without either crashing (reconcile handles that) or
+    finishing — otherwise the run stays `running` forever. Returns how many it failed.
+    ISO-8601 timestamps sort chronologically as strings, so the comparison is a plain
+    ``<`` on the stored value.
+    """
+    cutoff = (
+        datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=ttl_seconds)
+    ).isoformat()
+    try:
+        async with get_sessionmaker()() as session:
+            stmt = select(AgentRun).where(
+                AgentRun.status == "running", AgentRun.updated_at < cutoff
+            )
+            rows = (await session.execute(stmt)).scalars().all()
+            for row in rows:
+                row.status = "failed"
+                row.error = f"no heartbeat for >{ttl_seconds}s — presumed dead"
+                row.updated_at = _utc_now()
+            await session.commit()
+            if rows:
+                log.warning("swept stuck runs", count=len(rows), ttl_s=ttl_seconds)
+            return len(rows)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("stuck-run sweep failed", error=str(exc))
+        return 0
+
+
 async def list_nonterminal_runs(limit: int = 1000) -> list[RunRecord]:
     """Runs still `pending`/`running` — used by the worker's startup reconciler to
     re-enqueue work orphaned by a crash (so a dropped job isn't lost forever)."""
