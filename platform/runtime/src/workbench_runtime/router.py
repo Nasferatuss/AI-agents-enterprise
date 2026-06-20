@@ -40,9 +40,12 @@ log = get_logger(__name__)
 
 Candidate = tuple[str, str]  # (provider name, model role) — resolved against the registry
 
-# After a provider fails with a network/timeout error we mark it unhealthy for a
-# short cooldown and skip it in the chain — so a dead local box isn't retried on
-# every single request. Kept short; tests monkeypatch this to 0 to avoid flakes.
+# Provider health cooldown (deliberately not a full circuit breaker): after a
+# provider fails with a network/timeout error we mark it unhealthy for a short
+# cooldown and skip it in the chain — so a dead local box isn't retried on every
+# single request. Reset on the next success; there are no closed/open/half-open
+# states or a consecutive-failure threshold. Kept short; tests monkeypatch this
+# to 0 to avoid flakes.
 _HEALTH_COOLDOWN_S = 30.0
 
 

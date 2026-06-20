@@ -8,6 +8,7 @@ from workbench_jobs.queue import (
     dispatch,
     get_queue,
     register_handler,
+    registered_kinds,
     reset_queue,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "dispatch",
     "get_queue",
     "register_handler",
+    "registered_kinds",
     "reset_queue",
 ]

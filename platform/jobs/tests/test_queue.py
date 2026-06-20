@@ -55,18 +55,38 @@ def test_get_queue_defaults_to_inprocess(monkeypatch):
 
 
 class _FakeRedis:
+    """Minimal in-memory stand-in. index 0 = LEFT/head, index -1 = RIGHT/tail."""
+
     def __init__(self):
         self.lists: dict[str, list] = {}
 
     async def lpush(self, key, val):
         self.lists.setdefault(key, []).insert(0, val)
 
-    async def brpop(self, keys, timeout=0):  # noqa: ASYNC109 — mirrors redis-py's API
-        await asyncio.sleep(0)  # real brpop awaits I/O; yield so the loop stays cooperative
-        for key in keys:
-            if self.lists.get(key):
-                return (key, self.lists[key].pop())
-        return None
+    def _pop(self, key, pos):
+        lst = self.lists.get(key)
+        if not lst:
+            return None
+        return lst.pop(0) if pos == "LEFT" else lst.pop()
+
+    def _push(self, key, val, pos):
+        lst = self.lists.setdefault(key, [])
+        lst.insert(0, val) if pos == "LEFT" else lst.append(val)
+
+    async def lmove(self, src, dst, src_pos="LEFT", dst_pos="RIGHT"):
+        val = self._pop(src, src_pos)
+        if val is not None:
+            self._push(dst, val, dst_pos)
+        return val
+
+    async def blmove(self, src, dst, timeout, src_pos="LEFT", dst_pos="RIGHT"):  # noqa: ASYNC109
+        await asyncio.sleep(0)  # real blmove awaits I/O; yield so the loop stays cooperative
+        return await self.lmove(src, dst, src_pos, dst_pos)
+
+    async def lrem(self, key, count, value):
+        lst = self.lists.get(key, [])
+        if value in lst:
+            lst.remove(value)
 
 
 def _install_fake_redis(monkeypatch) -> _FakeRedis:
@@ -87,7 +107,7 @@ async def test_redis_queue_enqueue_pushes_json(monkeypatch):
 
 
 async def test_redis_worker_consumes_and_dispatches(monkeypatch):
-    _install_fake_redis(monkeypatch)
+    fake = _install_fake_redis(monkeypatch)
     seen: list[str] = []
 
     async def handler(run_id, payload):
@@ -106,6 +126,29 @@ async def test_redis_worker_consumes_and_dispatches(monkeypatch):
     with contextlib.suppress(asyncio.CancelledError):
         await worker  # let the cancellation settle so no task leaks past the test
     assert seen == ["r1"]
+    # at-least-once: the job is acked (removed from the processing list) after dispatch
+    assert not fake.lists.get(q._REDIS_PROCESSING_KEY)
+
+
+async def test_redis_reclaim_returns_orphaned_jobs(monkeypatch):
+    fake = _install_fake_redis(monkeypatch)
+    rq = q.RedisQueue("redis://x")
+    # Simulate a worker that died mid-job: a job stuck in the processing list.
+    fake.lists[q._REDIS_PROCESSING_KEY] = [Job(kind="demo", run_id="r1").model_dump_json()]
+    moved = await rq.reclaim()
+    assert moved == 1
+    assert not fake.lists.get(q._REDIS_PROCESSING_KEY)  # processing drained
+    assert fake.lists[q._REDIS_LIST_KEY]  # back on the main queue
+
+
+def test_job_rejects_untrusted_kind_and_run_id():
+    import pytest as _pytest
+    from pydantic import ValidationError
+
+    with _pytest.raises(ValidationError):
+        Job(kind="Bad Kind!", run_id="r1")  # spaces/caps/punct not allowed
+    with _pytest.raises(ValidationError):
+        Job(kind="demo", run_id="../etc/passwd")  # only [A-Za-z0-9_-]
 
 
 async def test_get_queue_redis_backend(monkeypatch):

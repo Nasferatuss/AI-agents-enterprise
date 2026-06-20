@@ -44,19 +44,33 @@ operational persistence, родственная трейсам; observability у
 
 5. **Job-queue с двумя бэкендами** ([[workbench-jobs]], `platform/jobs`):
    `InProcessQueue` (default, zero-config — фон через `asyncio.create_task` в самом
-   gateway) и `RedisQueue` (LPUSH/BRPOP → отдельный worker-процесс
-   `python -m workbench_gateway.worker`). Выбор по `WB_JOB_BACKEND`. Handler'ы
+   gateway) и `RedisQueue` → отдельный worker-процесс
+   `python -m workbench_gateway.worker`. Выбор по `WB_JOB_BACKEND`. Handler'ы
    регистрируются по `kind`; submit кладёт `Job` в очередь, а исполняет — текущий
-   процесс (inprocess) или любой worker (redis). Submit на любой реплике → исполнение
-   на любом worker'е, с back-pressure через список Redis. В compose worker поднимается
+   процесс (inprocess) или любой worker (redis). В compose worker поднимается
    профилем `redis-jobs` (`make up-distributed`); по умолчанию демо остаётся
-   in-process и не требует worker'а.
+   in-process.
 
-**Граница:** durable single-store + опциональный Redis-worker покрывают
-горизонтальное масштабирование submit/execute и back-pressure. Чего ещё НЕ
-делаем: дедлайны/ретраи-политики/scheduling/result-TTL уровня Temporal/arq — для
-этого взяли бы готовый фреймворк, если появится продовый объём. Worker'ы
-stateless, состояние run-ов — в durable store.
+6. **Гарантии доставки (post-review hardening).**
+   - **Idempotency на уровне схемы**: `UNIQUE(kind, idempotency_key)` (Alembic 0003).
+     `create_run` ловит `IntegrityError` и возвращает run-победителя → конкурентные
+     дубли невозможны, а не только последовательные ретраи.
+   - **At-least-once в RedisQueue**: `BLMOVE` main→processing (атомарно) + ack
+     (`LREM`) только после исполнения; `reclaim()` на старте воркера возвращает
+     осиротевшие в processing job'ы. Падение воркера mid-job → job переисполнится,
+     а не потеряется.
+   - **Startup reconciler** (`reconcile_runs`): на старте gateway (inprocess) или
+     воркера (redis) переэнкьюивает `pending`/`running` из durable store, у которых
+     есть handler — закрывает потерю in-process задач при рестарте. Paused HITL
+     (`awaiting_approval`) НЕ трогается (ждёт человека, не переисполнения).
+   - **Безопасность очереди**: `Job.kind`/`run_id` валидируются паттерном, `dispatch`
+     исполняет только *зарегистрированные* kinds; Redis за `WB_REDIS_PASSWORD`.
+
+**Граница:** теперь at-least-once + reconciler + race-safe idempotency. Чего ещё НЕ
+делаем: heartbeat/lease с авто-fail зависших `running`, exactly-once,
+scheduling/result-TTL и версионирование payload уровня Temporal/arq — для этого
+взяли бы готовый фреймворк, если появится продовый объём. Worker'ы stateless,
+состояние run-ов — в durable store.
 
 **Связи:** [[adr-006-custom-trace-schema]] · [[adr-007-predictable-orchestration]]
 (HITL gates) · [[observability]] · [[service-oriented-core]] (Agent Runtime)

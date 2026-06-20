@@ -5,7 +5,7 @@
 # as container env via its own `env_file:` directive.
 COMPOSE := docker compose -f infra/docker/docker-compose.yml $(if $(wildcard .env),--env-file .env,)
 
-.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up up-distributed worker down ps logs ui ui-build bench bench-live
+.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up up-distributed worker down ps logs ui ui-build bench bench-live bench-load
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,9 @@ bench: ## Cost-aware routing benchmark (stub: deterministic, network-free)
 
 bench-live: ## Cost-aware routing benchmark against real providers (network)
 	uv run python scripts/bench.py --live --out docs/benchmarks_data.md
+
+bench-load: ## Concurrency/throughput benchmark (stub: deterministic, network-free)
+	uv run python scripts/bench.py --concurrency 8 --stub
 
 seed: ## Seed the trace store with sample runs (for the observability demo)
 	uv run python scripts/seed_demo.py

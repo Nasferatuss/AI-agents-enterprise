@@ -37,7 +37,9 @@ Acted on a multi-agent code/security/architecture/product review.
 - **Architecture (ADR-010)** — durable run store (`agent_runs` + Alembic 0002):
   workflow HITL runs survive a gateway restart; async run model for the
   autonomous flagship (`POST /runs → 202`, poll `GET /runs/{id}`); Idempotency-Key
-  on expensive submissions; router circuit-breaker + 429 backoff. Plus a
+  on expensive submissions; router provider health cooldown (30s skip on a
+  failed provider, reset on success — not a full circuit breaker: no
+  half-open/failure-threshold states) + 429 backoff. Plus a
   distributed job queue (`workbench-jobs`: in-process + Redis/worker backends).
 - **Service-Oriented Core (ADR-001)** — extracted `platform/capabilities`
   (SQL guard, schema reflection, sample BI database, governed web) so apps depend
@@ -49,7 +51,21 @@ Acted on a multi-agent code/security/architecture/product review.
   `make bench`) with a real live run (33% cost cut on a mixed workload); README
   repositioned (production-style reference platform; modules grouped by depth).
 - **Tests** — fixed a CI gap (the autonomous flagship's tests were missing from
-  `testpaths`); suite now 266 passed, network-free, ruff clean.
+  `testpaths`); suite network-free, ruff clean.
+
+### Hardening round 2 (2026-06-20, second review)
+
+- **Delivery guarantees** — race-safe idempotency via `UNIQUE(kind,
+  idempotency_key)` (Alembic 0003) + `create_run` catching IntegrityError;
+  at-least-once Redis queue (`BLMOVE` + ack + `reclaim()`); a startup
+  **reconciler** that re-enqueues `pending`/`running` runs orphaned by a crash.
+- **Security** — netguard now blocks CGNAT `100.64.0.0/10` (RFC 6598) and has
+  dedicated unit tests (decimal/hex/octal/IPv6-mapped notations); Redis honors
+  `WB_REDIS_PASSWORD`; `Job` fields pattern-validated and `dispatch` runs only
+  registered kinds.
+- **Product** — concurrency/throughput benchmark (`make bench-load`,
+  `--concurrency N`) closing the "proof under load" gap; honest "provider health
+  cooldown" naming (it is not a full circuit breaker); README test count unified.
 
 ## v1.0.0 — Portfolio complete (2026-06-13)
 

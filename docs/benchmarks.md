@@ -64,6 +64,65 @@ Writing to a file whose contents include the `<!-- BENCH_TABLE -->` marker
 replaces only the section after the marker, so the methodology above is preserved
 when this page is regenerated.
 
+## Concurrency / throughput
+
+The cost benchmark above proves **correctness** — right tier, right price, right
+fallback — but it runs strictly **sequentially**, one `router.complete()` after the
+next. That says nothing about how the router behaves when many requests arrive at
+once, which is the senior question for any production routing layer. This section
+closes the **"proof under load"** gap: it measures the router under concurrent
+traffic and reports throughput, not just per-request cost.
+
+**What we measure.** A larger workload (the 15 `CASES` tiled up to `--requests` M,
+default 48, preserving the complexity mix) is replayed twice through the *same*
+router:
+
+1. **Sequential** (`concurrency = 1`) — the baseline.
+2. **Concurrent** (`concurrency = N`) — up to N `router.complete()` calls in flight
+   at once, bounded by an `asyncio.Semaphore(N)` over `asyncio.gather`.
+
+For each phase we record **wall-clock total**, **throughput (requests/sec)**, and
+latency **p50/p95** under that contention. We then derive:
+
+- **speedup** = sequential wall-clock ÷ concurrent wall-clock,
+- **parallel efficiency** = speedup ÷ N (how close to linear scaling),
+- **p95 degradation** = concurrent p95 ÷ sequential p95 (latency cost of load).
+
+**Why this is the proof.** Concurrency is real *iff* the concurrent wall-clock falls
+well below the **sum** of per-request latencies (the serial lower bound): N
+overlapping awaits finish in ≈ max, not ≈ sum. The harness measures exactly that, so
+a speedup > 1 with bounded p95 degradation is direct evidence the router sustains
+parallel load on its async path — not a claim, a measurement. The unit test
+(`tests/test_bench.py::test_load_is_actually_parallel`) asserts this property in CI.
+
+**Stub vs live — read this (again).** Same split as the cost benchmark, with one
+deliberate difference:
+
+- `--stub` (default, CI): a **network-free** async fake transport that `await`s a
+  real, scaled-down per-provider `asyncio.sleep` per request. Every host is kept
+  **up** (unlike the cost stub, which downs `local` to test fallback) so the numbers
+  reflect **concurrency, not fallback**. The sleeps are real, so the speedup is
+  genuinely measured — but the absolute throughput is **illustrative** (it reflects
+  the synthetic delays, not your providers).
+- `--live`: the real registry. Concurrency now contends for real provider sockets,
+  rate limits and the local GPU box, so throughput and p95 degradation are **real**.
+
+So: the stub proves the *mechanism scales*; the live run proves the *throughput you
+actually get*. The table below (`<!-- LOAD_TABLE -->`) is filled from a live run.
+
+**How to run.**
+
+```bash
+make bench-load                                  # stub, concurrency 8 (CI-safe)
+uv run python scripts/bench.py --concurrency 8 --stub
+uv run python scripts/bench.py --concurrency 16 --requests 96 --live \
+    --out docs/benchmarks_load.md                # live; .md table or .json
+```
+
+<!-- LOAD_TABLE -->
+
+_(fill from a live run — see `make bench-live`-style invocation above)_
+
 ## Latest run
 
 Live run on 2026-06-20, real providers (DeepSeek = cheap tier, Anthropic

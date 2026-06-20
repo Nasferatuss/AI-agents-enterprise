@@ -97,9 +97,12 @@ enabled purely from config):
 | **Approval `actor` is self-attested** unless `WB_APPROVAL_TOKEN` set | Audit identity unverifiable without real auth — add a role check (`require_approver_role`) for production. |
 | `GET /v1/models` exposes provider topology | Fingerprinting only — put behind `WB_API_KEY` in production. |
 | `WB_MCP_SERVER_COMMAND` runs an env-controlled subprocess | RCE if `.env` is compromised. Unset by default; pin/validate the command in production (see [MCP subprocess](#mcp-subprocess-wb_mcp_server_command)). |
+| **Redis / Qdrant unauthenticated by default** | The compose Redis honors `WB_REDIS_PASSWORD` (empty = no auth); Qdrant has no API key. With `WB_JOB_BACKEND=redis` the job queue lives in Redis, so an unauthenticated, network-reachable Redis lets anyone enqueue work. Set `WB_REDIS_PASSWORD` (and put both stores on a private network) before exposing the stack. Defense in depth: `Job` fields are pattern-validated and `dispatch` only runs *registered* kinds, so an injected job can't invent a handler. |
+| Rate limiter trusts `request.client.host` | Behind a reverse proxy this is the proxy IP — add `ProxyHeadersMiddleware` / trust `X-Forwarded-For` before relying on per-client limits in production. |
 
 For an internet-exposed deployment: set `WB_API_KEY`, `WB_RATE_LIMIT_PER_MIN`,
-and `WB_CORS_ORIGINS`, and front the service with TLS (see `docs/deploy.md`).
+`WB_CORS_ORIGINS`, `WB_PG_PASSWORD`, `WB_REDIS_PASSWORD`, keep Redis/Qdrant on a
+private network, and front the service with TLS (see `docs/deploy.md`).
 
 ## Hardening 2026-06-20
 

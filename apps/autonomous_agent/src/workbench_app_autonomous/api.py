@@ -22,6 +22,7 @@ from workbench_jobs import Job, get_queue, register_handler
 
 from workbench_app_autonomous.agent import AutonomousResult, run_autonomous
 from workbench_observability import (
+    create_run,
     get_run,
     get_run_by_idempotency_key,
     safe_record,
@@ -121,18 +122,23 @@ async def submit(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> RunHandle:
     # Idempotency: a retry with the same key returns the original run, never a second.
+    # Fast path (already finished/seen) + a race-safe create backed by the DB UNIQUE.
     if idempotency_key:
         existing = await get_run_by_idempotency_key(_KIND, idempotency_key)
         if existing is not None:
             return RunHandle(run_id=existing.run_id, status=existing.status)
     run_id = uuid.uuid4().hex[:16]
-    await upsert_run(
+    record = await create_run(
         run_id=run_id,
         kind=_KIND,
         status="pending",
         payload={"goal": req.goal},
         idempotency_key=idempotency_key,
     )
+    if record.run_id != run_id:
+        # We lost an idempotency race: another submit already created this run.
+        # Return the existing handle WITHOUT enqueuing a duplicate job.
+        return RunHandle(run_id=record.run_id, status=record.status)
     # Hand off to the queue: in-process (asyncio) by default, or Redis → a separate
     # worker process when WB_JOB_BACKEND=redis.
     await get_queue().enqueue(Job(kind=_KIND, run_id=run_id, payload={"goal": req.goal}))

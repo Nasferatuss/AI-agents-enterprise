@@ -10,7 +10,7 @@ full engineering loop: **context → tools → reasoning → action → eval →
 > Status: **Core + flagships, hardened.** A service-oriented platform core, 10 demo apps (4 deep,
 > 3 flagship, 3 illustrative — see [grouping](#modules)), real web/browser/autonomous flagships,
 > a published [routing benchmark](docs/benchmarks.md), and a [security model](docs/security.md)
-> with SSRF/sandbox/auth hardening. 230+ tests (network-free), CI, Docker Compose.
+> with SSRF/sandbox/auth hardening. 230+ network-free tests, CI, Docker Compose.
 >
 > *Reference platform, not a multi-tenant SaaS: the engineering practices are production-grade;
 > sample data and a few external actions are scoped demo seams, called out in [What's real vs demo](#whats-real-vs-demo).*
@@ -72,7 +72,7 @@ and which are scoped demos. Being explicit so reviewers know exactly what they'r
   approval gates** with a full audit trail.
 - **The three flagships above** — real DuckDuckGo web research, real headless-Chromium browsing, and a real
   multi-iteration plan/act/reflect loop.
-- **Engineering rigor** — 200+ tests (network-free), CI (lint + tests + real-browser e2e + UI build),
+- **Engineering rigor** — 230+ network-free tests, CI (lint + tests + real-browser e2e + UI build),
   Docker Compose stack, Alembic migrations.
 
 **Demo — illustrative fixtures & stubs (scoped on purpose):**

@@ -22,10 +22,17 @@ services:
 
   redis:
     image: redis:7-alpine
+    # requirepass is empty by default (local demo). Set WB_REDIS_PASSWORD in any
+    # non-local environment — especially with WB_JOB_BACKEND=redis, where the job
+    # queue lives in Redis and an unauthenticated, network-reachable Redis would let
+    # anyone enqueue work. The DSNs below carry the same password.
+    command: ["redis-server", "--requirepass", "${WB_REDIS_PASSWORD:-}"]
+    environment:
+      WB_REDIS_PASSWORD: ${WB_REDIS_PASSWORD:-}
     ports:
       - "${WB_REDIS_HOST_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$WB_REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -49,7 +56,7 @@ services:
       WB_ENV: dev
       WB_POSTGRES_DSN: postgresql://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
       WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
-      WB_REDIS_URL: redis://redis:6379/0
+      WB_REDIS_URL: redis://:${WB_REDIS_PASSWORD:-}@redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
       # async run model: "inprocess" (default; the api runs jobs itself) or "redis"
       # (enqueue to Redis → the `worker` service below executes them). For the redis
@@ -85,7 +92,7 @@ services:
       WB_JOB_BACKEND: redis
       WB_POSTGRES_DSN: postgresql://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
       WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
-      WB_REDIS_URL: redis://redis:6379/0
+      WB_REDIS_URL: redis://:${WB_REDIS_PASSWORD:-}@redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
     volumes:
       - ../../agent_workspace:/app/data/agent_workspace

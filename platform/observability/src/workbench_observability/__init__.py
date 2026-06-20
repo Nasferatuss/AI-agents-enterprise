@@ -2,8 +2,10 @@
 
 from workbench_observability.db import init_db, reset_engine
 from workbench_observability.runs import (
+    create_run,
     get_run,
     get_run_by_idempotency_key,
+    list_nonterminal_runs,
     list_runs,
     upsert_run,
 )
@@ -28,10 +30,12 @@ __all__ = [
     "TraceDetail",
     "TraceSummary",
     "aggregates",
+    "create_run",
     "get_run",
     "get_run_by_idempotency_key",
     "get_trace",
     "init_db",
+    "list_nonterminal_runs",
     "list_runs",
     "list_traces",
     "record_tool_audit",

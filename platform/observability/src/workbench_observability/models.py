@@ -6,7 +6,7 @@ step-by-step detail view. This is deliberately not a normalized
 run→step→toolcall→modelcall set of tables — "custom schema, not a LangSmith clone".
 """
 
-from sqlalchemy import JSON, Float, Integer, String, Text
+from sqlalchemy import JSON, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from workbench_observability.db import Base
@@ -40,6 +40,13 @@ class AgentRun(Base):
     """
 
     __tablename__ = "agent_runs"
+    # Enforce idempotency at the schema level: a (kind, idempotency_key) pair is
+    # unique, so two concurrent submits with the same key can't both create a run
+    # (the loser hits IntegrityError → caller returns the winner). NULL keys are
+    # distinct in SQL, so un-keyed runs are unaffected.
+    __table_args__ = (
+        UniqueConstraint("kind", "idempotency_key", name="uq_agent_runs_kind_idempotency"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     kind: Mapped[str] = mapped_column(String(32), index=True)  # workflow | autonomous | …

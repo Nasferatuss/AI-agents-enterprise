@@ -16,6 +16,7 @@ from workbench_jobs import get_queue
 from workbench_jobs.queue import RedisQueue
 
 import workbench_gateway.app  # noqa: F401 — import side effect: registers app handlers
+from workbench_gateway.reconcile import reconcile_runs
 from workbench_observability import init_db
 from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger
@@ -36,6 +37,8 @@ async def _main() -> None:
     if not isinstance(queue, RedisQueue):
         log.warning("redis queue unavailable — worker exiting")
         return
+    await queue.reclaim()  # recover jobs orphaned in the processing list
+    await reconcile_runs(queue)  # recover runs orphaned in the durable store
     try:
         await queue.consume_forever()
     except asyncio.CancelledError:  # graceful shutdown (SIGTERM)

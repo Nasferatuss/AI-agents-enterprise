@@ -24,6 +24,10 @@ from urllib.parse import urlsplit
 _ALLOWED_SCHEMES = ("http", "https")
 _MAX_REDIRECTS = 5
 
+# RFC 6598 Carrier-Grade NAT (100.64.0.0/10): not "private" per stdlib, but in
+# clouds it routes inside the VPC, so it must be treated as non-public for SSRF.
+_CGNAT = ipaddress.ip_network("100.64.0.0/10")
+
 
 class UnsafeUrlError(ValueError):
     """Raised when a URL is not safe to fetch (bad scheme or private target)."""
@@ -35,7 +39,11 @@ def _ip_is_public(ip: str) -> bool:
     except ValueError:
         return False
     # Block loopback, RFC-1918/ULA private, link-local (incl. 169.254.169.254
-    # cloud metadata), multicast, reserved, unspecified.
+    # cloud metadata), multicast, reserved, unspecified, plus RFC 6598 CGNAT
+    # (100.64.0.0/10) which stdlib does not flag as private but is VPC-internal.
+    if isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None:
+        # ::ffff:a.b.c.d — classify by the embedded IPv4 (e.g. metadata IP).
+        addr = addr.ipv4_mapped
     return not (
         addr.is_private
         or addr.is_loopback
@@ -43,6 +51,7 @@ def _ip_is_public(ip: str) -> bool:
         or addr.is_multicast
         or addr.is_reserved
         or addr.is_unspecified
+        or (isinstance(addr, ipaddress.IPv4Address) and addr in _CGNAT)
     )
 
 

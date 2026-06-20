@@ -25,6 +25,7 @@ import argparse
 import asyncio
 import json
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -238,6 +239,157 @@ async def run_benchmark(router: ModelRouter, cases: list[BenchCase], mode: str) 
     return _aggregate(report)
 
 
+# --- Load / throughput benchmark -----------------------------------------------
+# The cost benchmark above proves *correctness* (right tier, right price) but runs
+# strictly sequentially, so it says nothing about behaviour under concurrent load.
+# This section closes the "proof under load" gap: it replays a larger workload at a
+# configurable concurrency level through the same ``router.complete()`` and measures
+# wall-clock, throughput (req/s) and latency p50/p95 under contention — then runs the
+# same set sequentially (concurrency=1) as a baseline so the speedup and any latency
+# degradation are both visible.
+
+
+@dataclass
+class LatencyStats:
+    count: int
+    p50_ms: int
+    p95_ms: int
+    mean_ms: int
+    min_ms: int
+    max_ms: int
+
+
+@dataclass
+class LoadPhase:
+    """One execution of the workload at a fixed concurrency level."""
+
+    concurrency: int
+    requests: int
+    wall_clock_s: float
+    throughput_rps: float  # requests / wall_clock_s
+    latency: LatencyStats
+    sum_latency_ms: int  # sum of per-request latencies (the serial lower bound)
+    errors: int
+
+
+@dataclass
+class LoadReport:
+    mode: str
+    requests: int
+    concurrency: int
+    serial: LoadPhase  # concurrency == 1 baseline
+    concurrent: LoadPhase  # concurrency == N
+    # Derived comparison.
+    speedup: float = 0.0  # serial wall / concurrent wall
+    p95_degradation: float = 0.0  # concurrent p95 / serial p95
+    parallel_efficiency: float = 0.0  # speedup / concurrency
+
+
+def _latency_stats(latencies_ms: list[int]) -> LatencyStats:
+    if not latencies_ms:
+        return LatencyStats(0, 0, 0, 0, 0, 0)
+    ordered = sorted(latencies_ms)
+    return LatencyStats(
+        count=len(ordered),
+        p50_ms=_percentile(ordered, 50),
+        p95_ms=_percentile(ordered, 95),
+        mean_ms=int(round(sum(ordered) / len(ordered))),
+        min_ms=ordered[0],
+        max_ms=ordered[-1],
+    )
+
+
+def expand_cases(cases: list[BenchCase], target: int) -> list[BenchCase]:
+    """Replicate the workload up to (at least) ``target`` requests, preserving the
+    complexity mix. Ids are suffixed so each replica is uniquely identifiable."""
+    if target <= len(cases):
+        return list(cases[:target]) if target > 0 else list(cases)
+    out: list[BenchCase] = []
+    i = 0
+    while len(out) < target:
+        base = cases[i % len(cases)]
+        rep = i // len(cases)
+        out.append(
+            BenchCase(
+                id=f"{base.id}#{rep}" if rep else base.id,
+                prompt=base.prompt,
+                complexity=base.complexity,
+            )
+        )
+        i += 1
+    return out
+
+
+async def _run_phase(
+    router: ModelRouter, cases: list[BenchCase], concurrency: int
+) -> LoadPhase:
+    """Drive ``cases`` through the router with at most ``concurrency`` in-flight
+    completions (asyncio.gather bounded by a semaphore). Measures wall-clock and
+    per-request latency under that contention."""
+    sem = asyncio.Semaphore(max(1, concurrency))
+    latencies_ms: list[int] = [0] * len(cases)
+    errors = 0
+
+    async def _one(idx: int, case: BenchCase) -> None:
+        nonlocal errors
+        async with sem:
+            started = time.monotonic()
+            try:
+                await router.complete(
+                    [ChatMessage(role="user", content=case.prompt)],
+                    complexity=case.complexity,
+                )
+            except Exception:  # noqa: BLE001 — a failed request still counts as load
+                errors += 1
+            latencies_ms[idx] = int((time.monotonic() - started) * 1000)
+
+    wall_started = time.monotonic()
+    await asyncio.gather(*(_one(i, c) for i, c in enumerate(cases)))
+    wall_clock_s = time.monotonic() - wall_started
+
+    stats = _latency_stats(latencies_ms)
+    throughput = len(cases) / wall_clock_s if wall_clock_s > 0 else 0.0
+    return LoadPhase(
+        concurrency=concurrency,
+        requests=len(cases),
+        wall_clock_s=round(wall_clock_s, 4),
+        throughput_rps=round(throughput, 2),
+        latency=stats,
+        sum_latency_ms=sum(latencies_ms),
+        errors=errors,
+    )
+
+
+async def run_load_benchmark(
+    router: ModelRouter, cases: list[BenchCase], concurrency: int
+) -> LoadReport:
+    """Run ``cases`` first sequentially (concurrency=1) then at ``concurrency``,
+    through the same router, and report throughput / latency / speedup. Pure given a
+    router; importable and unit-testable. Runs the concurrent phase second so a warm
+    serial baseline does not flatter the parallel numbers."""
+    concurrency = max(1, concurrency)
+    serial = await _run_phase(router, cases, 1)
+    concurrent = (
+        serial
+        if concurrency == 1
+        else await _run_phase(router, cases, concurrency)
+    )
+
+    report = LoadReport(
+        mode="",  # set by caller
+        requests=len(cases),
+        concurrency=concurrency,
+        serial=serial,
+        concurrent=concurrent,
+    )
+    if concurrent.wall_clock_s > 0:
+        report.speedup = round(serial.wall_clock_s / concurrent.wall_clock_s, 2)
+    report.parallel_efficiency = round(report.speedup / concurrency, 3) if concurrency else 0.0
+    if serial.latency.p95_ms > 0:
+        report.p95_degradation = round(concurrent.latency.p95_ms / serial.latency.p95_ms, 2)
+    return report
+
+
 # --- Stub provider stack (network-free, deterministic) -------------------------
 # Every candidate is an OpenAI-compatible provider backed by an httpx MockTransport
 # so no real network/SDK is touched. Models map onto real pricing-table ids so the
@@ -331,6 +483,54 @@ def _apply_stub_latency(report: BenchReport) -> None:
     _aggregate(report)
 
 
+# --- Load stub: async handler with *real* per-request delay --------------------
+# The cost stub fakes latency post-run because MockTransport is ~0ms wall-clock —
+# fine for cost arithmetic, useless for a throughput proof. The load stub instead
+# awaits a real ``asyncio.sleep`` of the per-provider latency inside an async
+# MockTransport handler. That makes the router's own wall-clock latency genuine and,
+# crucially, makes concurrency observable: N overlapping sleeps finish in ~max, not
+# ~sum, so the measured speedup is real (just network-free and deterministic).
+
+# Scaled down from the cost stub's milliseconds so a full load run is quick in CI
+# while keeping the relative per-tier profile (local fast, frontier slow).
+_LOAD_DELAY_S: dict[str, float] = {
+    "local": 0.020,
+    "deepseek": 0.060,
+    "kimi": 0.060,
+    "anthropic": 0.120,
+    "openai": 0.120,
+}
+
+
+async def _load_handler(request: httpx.Request) -> httpx.Response:
+    host = request.url.host.split(".")[0]
+    await asyncio.sleep(_LOAD_DELAY_S.get(host, 0.05))
+    # Reuse the cost stub's body/fallback semantics, but the load stub keeps every
+    # host *up* so concurrency — not fallback — is what the numbers reflect.
+    profile = _STUB_PROFILE.get(host, {"in": 200, "out": 100})
+    body = json.loads(request.content or b"{}")
+    return httpx.Response(
+        200,
+        json={
+            "choices": [{"message": {"role": "assistant", "content": f"[load:{host}] ok"}}],
+            "usage": {
+                "prompt_tokens": profile["in"],
+                "completion_tokens": profile["out"],
+                "model": body.get("model", ""),
+            },
+        },
+    )
+
+
+def build_load_stub_router() -> ModelRouter:
+    """Stub router for the load benchmark: same tiered chain as the cost stub, but a
+    network-free async transport that sleeps real time per request so throughput and
+    concurrency speedup are genuinely measured."""
+    registry = {name: _stub_provider(name) for name in _STUB_PROFILE}
+    http = httpx.AsyncClient(transport=httpx.MockTransport(_load_handler))
+    return _StubRouter(registry=registry, http=http)
+
+
 def build_live_router() -> ModelRouter:
     return ModelRouter(registry=build_registry())
 
@@ -389,6 +589,74 @@ def render_markdown(report: BenchReport) -> str:
     return "\n".join(lines)
 
 
+def render_load_markdown(report: LoadReport) -> str:
+    lines: list[str] = []
+    lines.append(
+        f"### Load run ({report.mode} mode) — {report.requests} requests, "
+        f"concurrency {report.concurrency}"
+    )
+    lines.append("")
+    lines.append(
+        "| phase | concurrency | wall-clock (s) | throughput (req/s) | "
+        "p50 (ms) | p95 (ms) | mean (ms) | errors |"
+    )
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for label, p in (("sequential", report.serial), ("concurrent", report.concurrent)):
+        lines.append(
+            f"| {label} | {p.concurrency} | {p.wall_clock_s:.3f} | {p.throughput_rps:.2f} | "
+            f"{p.latency.p50_ms} | {p.latency.p95_ms} | {p.latency.mean_ms} | {p.errors} |"
+        )
+    lines.append("")
+    lines.append("#### Concurrency effect")
+    lines.append("")
+    lines.append("| metric | value |")
+    lines.append("|---|---|")
+    lines.append(f"| speedup (serial wall / concurrent wall) | {report.speedup:.2f}× |")
+    lines.append(
+        f"| parallel efficiency (speedup / concurrency) | {report.parallel_efficiency:.0%} |"
+    )
+    lines.append(
+        f"| p95 latency under load vs serial | {report.p95_degradation:.2f}× |"
+    )
+    lines.append(
+        f"| throughput gain | "
+        f"{report.serial.throughput_rps:.2f} → {report.concurrent.throughput_rps:.2f} req/s |"
+    )
+    return "\n".join(lines)
+
+
+def _phase_to_dict(p: LoadPhase) -> dict:
+    return {
+        "concurrency": p.concurrency,
+        "requests": p.requests,
+        "wall_clock_s": p.wall_clock_s,
+        "throughput_rps": p.throughput_rps,
+        "sum_latency_ms": p.sum_latency_ms,
+        "errors": p.errors,
+        "latency": {
+            "count": p.latency.count,
+            "p50_ms": p.latency.p50_ms,
+            "p95_ms": p.latency.p95_ms,
+            "mean_ms": p.latency.mean_ms,
+            "min_ms": p.latency.min_ms,
+            "max_ms": p.latency.max_ms,
+        },
+    }
+
+
+def load_report_to_dict(report: LoadReport) -> dict:
+    return {
+        "mode": report.mode,
+        "requests": report.requests,
+        "concurrency": report.concurrency,
+        "speedup": report.speedup,
+        "parallel_efficiency": report.parallel_efficiency,
+        "p95_degradation": report.p95_degradation,
+        "serial": _phase_to_dict(report.serial),
+        "concurrent": _phase_to_dict(report.concurrent),
+    }
+
+
 def report_to_dict(report: BenchReport) -> dict:
     return {
         "mode": report.mode,
@@ -426,25 +694,57 @@ def report_to_dict(report: BenchReport) -> dict:
 
 
 _TABLE_MARKER = "<!-- BENCH_TABLE -->"
+_LOAD_TABLE_MARKER = "<!-- LOAD_TABLE -->"
+
+
+def _write_marked(out: Path, marker: str, table: str) -> None:
+    # If the target already has the marker, replace everything after it (keeps the
+    # methodology prose intact). Otherwise write the table standalone.
+    if out.exists() and marker in out.read_text():
+        head = out.read_text().split(marker)[0]
+        out.write_text(head + marker + "\n\n" + table + "\n")
+    else:
+        out.write_text(table + "\n")
 
 
 def _write_out(report: BenchReport, out: Path) -> None:
     if out.suffix == ".json":
         out.write_text(json.dumps(report_to_dict(report), indent=2) + "\n")
         return
-    table = render_markdown(report)
-    # If the target already has a BENCH_TABLE marker, replace everything after it
-    # (keeps the docs/benchmarks.md methodology section intact). Otherwise write
-    # the table standalone.
-    if out.exists() and _TABLE_MARKER in out.read_text():
-        head = out.read_text().split(_TABLE_MARKER)[0]
-        out.write_text(head + _TABLE_MARKER + "\n\n" + table + "\n")
-    else:
-        out.write_text(table + "\n")
+    _write_marked(out, _TABLE_MARKER, render_markdown(report))
+
+
+def _write_load_out(report: LoadReport, out: Path) -> None:
+    if out.suffix == ".json":
+        out.write_text(json.dumps(load_report_to_dict(report), indent=2) + "\n")
+        return
+    _write_marked(out, _LOAD_TABLE_MARKER, render_load_markdown(report))
+
+
+async def _run_load_cli(args: argparse.Namespace, mode: str) -> int:
+    cases = expand_cases(CASES, args.requests)
+    router = build_live_router() if mode == "live" else build_load_stub_router()
+    try:
+        report = await run_load_benchmark(router, cases, args.concurrency)
+    finally:
+        await router.aclose()
+    report.mode = mode
+
+    print(render_load_markdown(report))
+    if args.out:
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        _write_load_out(report, out)
+        print(f"\nwrote {out}", file=sys.stderr)
+    return 0
 
 
 async def _main_async(args: argparse.Namespace) -> int:
     mode = "live" if args.live else "stub"
+
+    if args.concurrency is not None:
+        return await _run_load_cli(args, mode)
+
     if mode == "live":
         router = build_live_router()
         report = await run_benchmark(router, CASES, mode)
@@ -476,7 +776,23 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PATH",
         help="write report to PATH (.md table or .json) in addition to stdout",  # noqa: E501
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        metavar="N",
+        help="load/throughput mode: replay the workload at concurrency N "
+        "(vs a sequential baseline) and report throughput + latency under load",
+    )
+    parser.add_argument(
+        "--requests",
+        type=int,
+        default=48,
+        metavar="M",
+        help="load mode only: total requests to replay (CASES are tiled to M; default 48)",
+    )
     args = parser.parse_args(argv)
+    if args.concurrency is not None and args.concurrency < 1:
+        parser.error("--concurrency must be >= 1")
     return asyncio.run(_main_async(args))
 
 

@@ -35,6 +35,18 @@ async def lifespan(app: FastAPI):
         log.info("trace store ready", url=get_settings().trace_db_url.split("@")[-1])
     except Exception as exc:  # noqa: BLE001 — trace store is best-effort, never blocks boot
         log.warning("trace store init failed; tracing disabled", error=str(exc))
+    # In-process backend: this gateway executes jobs itself, so on (re)start it must
+    # recover runs orphaned by the previous process. With the Redis backend the
+    # dedicated worker owns reconciliation instead (avoid double re-enqueue).
+    if get_settings().job_backend == "inprocess":
+        try:
+            from workbench_jobs import get_queue
+
+            from workbench_gateway.reconcile import reconcile_runs
+
+            await reconcile_runs(get_queue())
+        except Exception as exc:  # noqa: BLE001 — recovery is best-effort, never blocks boot
+            log.warning("run reconciliation failed", error=str(exc))
     yield
 
 
