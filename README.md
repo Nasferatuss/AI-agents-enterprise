@@ -3,13 +3,17 @@
 [![CI](https://github.com/Nasferatuss/AI-agents-enterprise/actions/workflows/ci.yml/badge.svg)](https://github.com/Nasferatuss/AI-agents-enterprise/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Service-oriented platform for building, evaluating, and operating production-grade AI agents.
-One core, ten demo apps — every module demonstrates the full engineering loop:
-**context → tools → reasoning → action → eval → trace → governance → demo.**
+A **production-style reference platform** for building, evaluating, and operating AI agents:
+one service-oriented core, with demo apps and flagship agents on top. Every module walks the
+full engineering loop: **context → tools → reasoning → action → eval → trace → governance → demo.**
 
-> Status: **Portfolio complete + flagships** — service-oriented core, 10 demo modules, and
-> three deeper flagship agents (autonomous plan/act/reflect, real-web deep research, live
-> computer-use). Hardened: 200+ tests, CI, Docker.
+> Status: **Core + flagships, hardened.** A service-oriented platform core, 10 demo apps (4 deep,
+> 3 flagship, 3 illustrative — see [grouping](#modules)), real web/browser/autonomous flagships,
+> a published [routing benchmark](docs/benchmarks.md), and a [security model](docs/security.md)
+> with SSRF/sandbox/auth hardening. 230+ tests (network-free), CI, Docker Compose.
+>
+> *Reference platform, not a multi-tenant SaaS: the engineering practices are production-grade;
+> sample data and a few external actions are scoped demo seams, called out in [What's real vs demo](#whats-real-vs-demo).*
 
 ## What's built
 
@@ -21,17 +25,24 @@ metrics, citation accuracy, LLM judges, synthetic QA), a predictable **workflow 
 (state machine + human-in-the-loop approval gates), and an **observability layer** (a trace
 for every run).
 
-**Modules (10):**
-1. **Workflow Orchestrator** — predictable workflows with approval gates & audit log → `/workflows`
-2. **Text-to-SQL BI Agent** — question → guarded read-only SQL → result → explanation → `/text2sql`
-3. **RAG Evaluation Lab** — RAG pipeline + strict retrieval/answer evals
-4. **Observability Console** — cost, latency, failure taxonomy for every run → `/observability`
+<a id="modules"></a>
+**Demo modules.** Grouped by depth so you know where to look — the deep four and the three
+flagships below are the substance; the illustrative ones show a pattern end-to-end on fixtures.
+(Deep Research started as a demo module and graduated into the flagship tier — see below.)
+
+*Deep (production-shaped engineering):*
+1. **Workflow Orchestrator** — predictable state machine, approval gates, audit log, durable runs → `/workflows`
+2. **Text-to-SQL BI Agent** — question → guarded read-only SQL (multi-layer guard) → result → explanation → `/text2sql`
+3. **RAG Evaluation Lab** — RAG pipeline + strict retrieval/answer evals + CI regression gate
+4. **Observability Console** — cost, latency, failure taxonomy (SQL-aggregated) for every run → `/observability`
+
+*Illustrative (a pattern shown on fixtures):*
 5. **Business Process Investigator** — spec → entities, process map, contradictions, backlog → `/process`
 6. **Compliance & Risk Reviewer** — PII + policy rules + a deterministic risk score → `/compliance`
-7. **Deep Research Agent** — plan → research via a governed Tool Gateway → cited report → `/research`
-8. **Guarded Computer-Use QA** — agent drives a legacy UI sandbox, reports bugs → `/qa`
-9. **Synthetic Eval Generator** — corpus → eval dataset (standard/negative/multi-hop) + benchmark card
-10. **Incident Response Agent** — failed traces → root-cause classification → RCA report → `/incidents`
+7. **Synthetic Eval Generator** — corpus → eval dataset (standard/negative/multi-hop) + benchmark card
+8. **Incident Response Agent** — failed traces → root-cause classification → RCA report → `/incidents`
+9. **Guarded Computer-Use QA** — deterministic scenario runner against a bundled UI sandbox → `/qa`
+   *(the live-browser version is the `/browse` flagship below)*
 
 **Flagship agents** (deeper, externally-connected — the "wow" tier):
 - 🤖 **Autonomous Agent** — `plan → act (tools) → reflect → repeat` until the goal is met, with a
@@ -128,6 +139,7 @@ sqlglot · Next.js / React / TypeScript / Tailwind · Docker Compose · hybrid l
 make install   # uv sync + npm install
 make qa        # lint + full test suite (incl. eval regression + SQL injection)
 make seed      # populate the observability console with sample runs
+make bench     # cost-aware routing benchmark (stub; `make bench-live` for real providers)
 make up        # full stack via Docker Compose (postgres, qdrant, redis, api)
 make ui        # demo console on :3000
 ```
@@ -138,6 +150,7 @@ make ui        # demo console on :3000
 - [`docs/demo.md`](docs/demo.md) — 5-minute guided tour
 - [`docs/deploy.md`](docs/deploy.md) — full-stack Docker + public-demo deployment
 - [`docs/security.md`](docs/security.md) — threat model, controls, known limitations
+- [`docs/benchmarks.md`](docs/benchmarks.md) — cost-aware routing benchmark (methodology + numbers)
 - [`CHANGELOG.md`](CHANGELOG.md) · [`wiki/00_index.md`](wiki/00_index.md) — knowledge base (architecture, ADRs, roadmap, risks)
 
 ## License

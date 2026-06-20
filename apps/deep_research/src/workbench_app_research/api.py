@@ -6,6 +6,7 @@ import time
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from workbench_app_research.audit import attach_audit_sink
 from workbench_app_research.research import ResearchReport, run_research
 from workbench_app_research.web import build_live_gateway
 from workbench_observability import safe_record
@@ -53,7 +54,8 @@ async def research(req: ResearchRequest) -> ResearchReport:
         if command:
             # Source tools from a real MCP server over stdio (opt-in).
             cmd, *args = shlex.split(command)
-            gateway = ToolGateway()  # fresh per request → clean audit log
+            # Fresh per request → clean in-memory audit; sink persists it durably.
+            gateway = attach_audit_sink(ToolGateway())
             async with mcp_session(cmd, args) as session:
                 names = await register_mcp_tools(gateway, session)
                 report = await run_research(
@@ -64,10 +66,12 @@ async def research(req: ResearchRequest) -> ResearchReport:
             # Same ToolSpec names as the corpus, so run_research is unchanged; a
             # network failure degrades to empty results (see web.py), and the
             # corpus stays available as the report-text fallback (_source_text).
-            gateway = build_live_gateway()  # fresh per request → clean audit log
+            # Fresh per request → clean in-memory audit; sink persists it durably.
+            gateway = attach_audit_sink(build_live_gateway())
             report = await run_research(get_router(), gateway, req.question)
         else:
-            gateway = build_default_gateway()  # fresh per request → clean audit log
+            # Fresh per request → clean in-memory audit; sink persists it durably.
+            gateway = attach_audit_sink(build_default_gateway())
             report = await run_research(get_router(), gateway, req.question)
     except NoProviderAvailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

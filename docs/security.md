@@ -57,6 +57,27 @@ approve/reject when configured.
   row_count) so traces don't duplicate sensitive query data.
 - **Trace queries** use SQLAlchemy bound parameters — no SQL injection.
 
+### MCP subprocess (`WB_MCP_SERVER_COMMAND`)
+
+When set, the deep-research agent sources its tools from a real MCP server: the
+value is `shlex.split` and spawned as a **child process over stdio**
+(`apps/deep_research/.../api.py`). This is a legitimate feature — it lets the
+agent use tools from an external MCP server instead of the in-process corpus
+connectors — but it means **whoever controls `.env` controls a command the API
+process will execute** (RCE on `.env` compromise).
+
+Mitigations / operating rules:
+
+- `.env` must be treated as a secret: never committed (it is git-ignored), and
+  readable only by the service account. Compromise of `.env` is already game-over
+  for API keys; this widens it to code execution, so the same protection applies.
+- It is **unset by default** — no subprocess is spawned unless explicitly
+  configured.
+- In production, **pin** the command to a known, audited binary/module and do not
+  derive it from anything request- or operator-supplied at runtime; ideally
+  validate it against an allowlist before launch. The tools the server exposes
+  still pass through the same gateway allowlist + audit log (ADR-005).
+
 ### Transport & access
 
 CORS restricted to the console origin and the methods/headers it uses. Input
@@ -75,9 +96,36 @@ enabled purely from config):
 | API auth & rate limiting | ✅ available, **off by default** — set `WB_API_KEY` / `WB_RATE_LIMIT_PER_MIN` before exposing to a network. Rate limiter is per-process; multi-instance needs Redis. |
 | **Approval `actor` is self-attested** unless `WB_APPROVAL_TOKEN` set | Audit identity unverifiable without real auth — add a role check (`require_approver_role`) for production. |
 | `GET /v1/models` exposes provider topology | Fingerprinting only — put behind `WB_API_KEY` in production. |
+| `WB_MCP_SERVER_COMMAND` runs an env-controlled subprocess | RCE if `.env` is compromised. Unset by default; pin/validate the command in production (see [MCP subprocess](#mcp-subprocess-wb_mcp_server_command)). |
 
 For an internet-exposed deployment: set `WB_API_KEY`, `WB_RATE_LIMIT_PER_MIN`,
 and `WB_CORS_ORIGINS`, and front the service with TLS (see `docs/deploy.md`).
+
+## Hardening 2026-06-20
+
+Findings closed in this pass (all ship with regression tests):
+
+- **SSRF guard** (`platform/shared/.../netguard.py`): `assert_public_url` /
+  `safe_get` reject non-`http(s)` schemes and private/loopback/link-local/metadata
+  (169.254.169.254) targets, re-validating every redirect hop. Wired into the
+  autonomous `fetch_url`, deep-research fetch, and live-browse navigate/start-url.
+- **File-sandbox symlink escape**: `_safe_path` now enforces realpath containment
+  and refuses a final symlink, on top of the existing `..`-traversal / absolute-path
+  checks.
+- **Live-browse sensitive-input block**: typing into a card/CVV/password/PAN field
+  marks the session and blocks any subsequent submit/click — closes the
+  type-then-Continue bypass.
+- **Prod fail-fast auth**: in `WB_ENV=prod` the gateway refuses to start when
+  `WB_API_KEY` / `WB_APPROVAL_TOKEN` are unset or CORS is wildcard.
+- **Security headers**: gateway adds `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`.
+- **Durable audit sink**: ToolGateway gained an optional persistent `audit_sink`
+  (denied calls included) so the audit trail outlives a per-request gateway.
+- **AST depth limit**: the demo `_safe_eval` caps AST depth to prevent a
+  `RecursionError` DoS.
+- **Postgres password parameterized**: `docker-compose.yml` reads
+  `WB_PG_PASSWORD` (default `workbench` for the local demo); override in any
+  non-local environment.
 
 ## Running the security QA
 

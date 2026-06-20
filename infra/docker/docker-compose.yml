@@ -5,7 +5,8 @@ services:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: workbench
-      POSTGRES_PASSWORD: workbench
+      # override in any non-local environment via WB_PG_PASSWORD in .env
+      POSTGRES_PASSWORD: ${WB_PG_PASSWORD:-workbench}
       POSTGRES_DB: workbench
     ports:
       # host port is overridable to avoid clashing with another local Postgres
@@ -46,8 +47,8 @@ services:
         required: false
     environment:
       WB_ENV: dev
-      WB_POSTGRES_DSN: postgresql://workbench:workbench@postgres:5432/workbench
-      WB_TRACE_DB_URL: postgresql+asyncpg://workbench:workbench@postgres:5432/workbench
+      WB_POSTGRES_DSN: postgresql://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
+      WB_TRACE_DB_URL: postgresql+asyncpg://workbench:${WB_PG_PASSWORD:-workbench}@postgres:5432/workbench
       WB_REDIS_URL: redis://redis:6379/0
       WB_QDRANT_URL: http://qdrant:6333
     volumes:

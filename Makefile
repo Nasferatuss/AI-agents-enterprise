@@ -5,7 +5,7 @@
 # as container env via its own `env_file:` directive.
 COMPOSE := docker compose -f infra/docker/docker-compose.yml $(if $(wildcard .env),--env-file .env,)
 
-.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up down ps logs ui ui-build
+.PHONY: help install api test lint fmt qa eval-regression e2e seed migrate up down ps logs ui ui-build bench bench-live
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -35,6 +35,12 @@ eval-regression: ## Run the retrieval regression gate only
 e2e: ## Run the real-browser computer-use QA (installs chromium if needed)
 	uv run playwright install chromium
 	uv run pytest -m playwright -q
+
+bench: ## Cost-aware routing benchmark (stub: deterministic, network-free)
+	uv run python scripts/bench.py --stub
+
+bench-live: ## Cost-aware routing benchmark against real providers (network)
+	uv run python scripts/bench.py --live --out docs/benchmarks_data.md
 
 seed: ## Seed the trace store with sample runs (for the observability demo)
 	uv run python scripts/seed_demo.py
