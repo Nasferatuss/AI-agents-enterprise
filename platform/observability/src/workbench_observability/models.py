@@ -27,3 +27,25 @@ class Trace(Base):
     num_steps: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)  # full serialized run
+
+
+class AgentRun(Base):
+    """Durable run state for long-lived runs (durability hardening).
+
+    Unlike `Trace` (a terminal, read-only record of a finished run), this is the
+    *live* state of a run that must survive a restart: a workflow paused at a
+    human-in-the-loop gate (`awaiting_approval` for hours), or an async flagship
+    run being polled (`pending` → `running` → terminal). The serialized domain
+    object lives in `payload`; `idempotency_key` dedupes expensive submissions.
+    """
+
+    __tablename__ = "agent_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), index=True)  # workflow | autonomous | …
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)  # serialized domain object
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(40), index=True)  # ISO, microsecond
+    updated_at: Mapped[str] = mapped_column(String(40))

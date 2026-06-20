@@ -13,8 +13,9 @@ nothing risky has happened yet. A human resumes with approve (run continues and
 executes the gate) or reject (run ends `rejected`, the gate never runs). Every
 decision is appended to `run.approvals` as an audit trail.
 
-v0 keeps runs in memory; Postgres persistence arrives with the trace layer
-(Sprint 5).
+Runs are persisted by the registry to the durable run store
+(`workbench_observability.runs`), so a run paused at an approval gate survives a
+gateway restart and can be resumed from any replica — see `registry.py`.
 """
 
 import asyncio

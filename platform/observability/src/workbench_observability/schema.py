@@ -28,6 +28,21 @@ class TraceDetail(TraceSummary):
     payload: dict
 
 
+class RunRecord(BaseModel):
+    """A durable run row (live state of a long-lived run), distinct from a Trace."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    run_id: str
+    kind: str
+    status: str
+    payload: dict
+    idempotency_key: str | None = None
+    error: str | None = None
+    created_at: str
+    updated_at: str
+
+
 class FailureBucket(BaseModel):
     kind: str
     status: str
