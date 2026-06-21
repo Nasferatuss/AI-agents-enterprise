@@ -33,12 +33,12 @@ from workbench_observability import (
 )
 from workbench_runtime import get_router
 from workbench_runtime.router import NoProviderAvailableError
+from workbench_shared.config import get_settings
 
 router = APIRouter(prefix="/v1/apps/autonomous", tags=["autonomous-agent"])
 
 _KIND = "autonomous"
 _TERMINAL_STATUSES = {"completed", "max_steps_reached", "failed"}
-_HEARTBEAT_INTERVAL_S = 30.0
 
 
 class RunRequest(BaseModel):
@@ -103,7 +103,7 @@ async def _execute_run(run_id: str, goal: str) -> None:
 
     started = time.monotonic()
     await upsert_run(run_id=run_id, kind=_KIND, status="running", payload={"goal": goal})
-    heartbeat = asyncio.create_task(_heartbeat(run_id, _HEARTBEAT_INTERVAL_S))
+    heartbeat = asyncio.create_task(_heartbeat(run_id, get_settings().run_heartbeat_interval_s))
     try:
         try:
             result = await run_autonomous(get_router(), goal)

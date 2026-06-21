@@ -38,8 +38,17 @@ async def _main() -> None:
     if not isinstance(queue, RedisQueue):
         log.warning("redis queue unavailable — worker exiting")
         return
-    await queue.reclaim()  # recover jobs orphaned in the processing list
-    await reconcile_runs(queue)  # recover runs orphaned in the durable store
+    reclaimed = await queue.reclaim()  # recover jobs orphaned in the processing list
+    reconciled = await reconcile_runs(queue)  # recover runs orphaned in the durable store
+    # Recovery telemetry on startup: how much work was recovered, and whether any
+    # poison messages have piled up in the dead-letter queue (needs ops attention).
+    dlq = await queue.dead_letter_count()
+    log.info(
+        "worker recovery complete",
+        reclaimed=reclaimed,
+        reconciled=reconciled,
+        dead_letter=dlq,
+    )
     sweeper = asyncio.create_task(  # fail runs that hang without a heartbeat
         run_sweeper(settings.run_sweep_interval_s, settings.run_stuck_ttl_s)
     )

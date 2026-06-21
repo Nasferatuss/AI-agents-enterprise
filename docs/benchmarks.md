@@ -45,6 +45,16 @@ actual`.
 So: the stub proves the *mechanism*; the live run proves the *result*. The table
 below is filled from a live run.
 
+**Reproducible offline figure.** Because the stub is fully deterministic, its
+local-first savings are a fixed, offline-reproducible number: **44%** ($0.0624 actual
+vs $0.112 all-frontier baseline) on the 15-case mix. That is not the headline (the
+*live* run's **33%** on real providers is), but it is the number anyone can reproduce
+from a clean clone with no keys — and it is pinned as a regression gate in
+`tests/test_bench.py::test_stub_savings_are_reproducible`, so a routing/pricing change
+that moves it fails CI instead of silently shifting the published figure. The two
+differ because token mixes differ between the baked stub and live providers; both
+confirm the same thesis (cheap-tier routing of simple/standard work cuts cost).
+
 ## How to run
 
 ```bash

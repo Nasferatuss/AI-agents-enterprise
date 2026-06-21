@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     # nor finishes). The handler heartbeats updated_at while genuinely alive.
     run_stuck_ttl_s: int = 900  # 15 min without a heartbeat → considered dead
     run_sweep_interval_s: int = 120  # how often the sweeper checks
+    run_heartbeat_interval_s: int = 30  # how often a live handler bumps updated_at
+    # Invariant: run_stuck_ttl_s must comfortably exceed the heartbeat interval, or a
+    # genuinely-alive but slow run gets swept as "dead". The sweeper warns on startup
+    # if ttl < this multiple of the heartbeat.
 
     # Model routing (ADR-003 hybrid local/API split + ADR-008 router).
     # API keys use standard env names (ANTHROPIC_API_KEY, OPENAI_API_KEY,

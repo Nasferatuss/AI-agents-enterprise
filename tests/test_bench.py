@@ -8,6 +8,8 @@ fallback path is actually exercised, and the markdown table renders.
 import sys
 from pathlib import Path
 
+import pytest
+
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
@@ -72,6 +74,15 @@ async def test_savings_are_positive_and_bounded():
     assert report.total_cost_usd < report.frontier_baseline_usd
     assert report.savings_usd > 0
     assert 0.0 < report.savings_pct <= 1.0
+
+
+async def test_stub_savings_are_reproducible():
+    # The stub is fully deterministic, so its local-first savings are a fixed,
+    # offline-reproducible number (the live run reports ~33% on real providers).
+    # This pins it as a regression gate: a routing/pricing change that moves the
+    # headline savings fails here instead of silently shifting the published figure.
+    report = await _run()
+    assert report.savings_pct == pytest.approx(0.44, abs=0.02)
 
 
 async def test_markdown_renders_nonempty_table():

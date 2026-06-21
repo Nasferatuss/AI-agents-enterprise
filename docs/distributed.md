@@ -93,13 +93,16 @@ no-op by the effectively-once guard.
 | Worker **hangs** (alive, not crashed, stops progressing) | heartbeat (`touch_run` bumps `updated_at`) + `run_sweeper` fails runs idle past `WB_RUN_STUCK_TTL_S` |
 | Redelivery of an **already-finished** run | effectively-once: handler skips a terminal run |
 | Concurrent duplicate submit (same idempotency key) | `UNIQUE(kind, idempotency_key)` + `create_run` catching `IntegrityError` returns the race winner |
+| **Poison message** (keeps getting orphaned, or unparseable) | each reclaim bumps `Job.attempts`; past `_MAX_ATTEMPTS` (5) it's moved to the **dead-letter queue** (`workbench:jobs:dead`) instead of looping forever — `dead_letter_count()` surfaces the depth for ops |
 
 ## Not done on purpose
 
-Per-job visibility-timeout/lease, dead-letter queue with max-retries, and true
-exactly-once with partial-result checkpointing are out of scope — at that point
-the right move is a purpose-built engine (Temporal/arq), not more bespoke Redis
-list choreography. ADR-010 records this boundary.
+Per-job **visibility-timeout/lease** (reclaiming only jobs whose lease expired, vs.
+all of `processing` on startup) and true **exactly-once** with partial-result
+checkpointing are out of scope — at that point the right move is a purpose-built
+engine (Temporal/arq), not more bespoke Redis choreography. A bounded **dead-letter
+queue + max-retries** *is* implemented (above), since that is standard queue hygiene
+rather than durable-execution machinery. ADR-010 records this boundary.
 
 **Related:** [ADR-010](../wiki/decisions/adr-010-durable-async-runs.md) ·
 `platform/jobs/src/workbench_jobs/queue.py` ·

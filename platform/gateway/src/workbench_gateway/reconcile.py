@@ -16,9 +16,14 @@ import asyncio
 from workbench_jobs import Job, registered_kinds
 
 from workbench_observability import list_nonterminal_runs, sweep_stuck_runs
+from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger
 
 log = get_logger(__name__)
+
+# A run is swept as dead only after ttl_s without a heartbeat; if the TTL isn't well
+# clear of the heartbeat interval, a slow-but-alive run can be wrongly failed.
+_MIN_TTL_HEARTBEAT_RATIO = 3
 
 
 async def reconcile_runs(queue) -> int:
@@ -39,6 +44,15 @@ async def run_sweeper(interval_s: int, ttl_s: int) -> None:
     """Periodically fail runs that stopped heartbeating (a hung worker that neither
     crashed nor finished). Loops until cancelled; idempotent, so it's safe even if
     more than one replica runs it."""
+    heartbeat_s = get_settings().run_heartbeat_interval_s
+    if ttl_s < _MIN_TTL_HEARTBEAT_RATIO * heartbeat_s:
+        # Misconfiguration footgun: the sweeper would fail live-but-slow runs.
+        log.warning(
+            "run_stuck_ttl_s is close to the heartbeat interval — alive runs may be swept",
+            ttl_s=ttl_s,
+            heartbeat_s=heartbeat_s,
+            recommended_min_ttl_s=_MIN_TTL_HEARTBEAT_RATIO * heartbeat_s,
+        )
     while True:
         await asyncio.sleep(interval_s)
         await sweep_stuck_runs(ttl_s)

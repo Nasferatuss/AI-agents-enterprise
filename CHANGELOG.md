@@ -167,6 +167,23 @@ Closed the remaining low-severity findings from the final multi-agent review; +4
   provider keys are stripped and only the keyless `local` provider is enabled, so a future `.env`
   leak fails loudly here instead of silently un-hermeticizing the suite.
 
+### Hardening round 9 (2026-06-21, the "to-10" increment — bounded, not Temporal)
+
+The reviewers' remaining items, doing the genuinely-additive bounded parts and keeping true
+exactly-once as the documented boundary. +4 tests (326 passing).
+
+- **Dead-letter queue + max-retries** — `Job.attempts` is bumped on each reclaim; past
+  `_MAX_ATTEMPTS` (5), or if the payload is unparseable, the job is parked in
+  `workbench:jobs:dead` instead of looping forever. `dead_letter_count()` surfaces the depth.
+  Standard queue hygiene (not durable-execution machinery — true exactly-once stays out, per ADR-010).
+- **Heartbeat/TTL invariant guard** — `WB_RUN_HEARTBEAT_INTERVAL_S` is now config; the sweeper
+  warns on startup if `WB_RUN_STUCK_TTL_S` isn't comfortably above it (a live-but-slow run would
+  otherwise be swept as dead).
+- **Recovery telemetry** — the worker logs reclaimed/reconciled/dead-letter counts on startup.
+- **Reproducible cost figure** — the deterministic stub's local-first savings (44%, offline,
+  reproducible from a clean clone) is documented alongside the live 33% and pinned as a regression
+  gate (`test_stub_savings_are_reproducible`).
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

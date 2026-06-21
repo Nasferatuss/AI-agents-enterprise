@@ -84,11 +84,14 @@ effectively-once на двух worker'ах — `docs/distributed.md` + дете�
 `test_two_workers_crash_midjob_reclaim_reruns_without_double_work`.
 
 **Граница реализации:** at-least-once + reconciler + race-safe idempotency +
-heartbeat/sweeper + effectively-once. Чего ещё НЕ делаем (намеренно): true exactly-once
-с partial-result checkpointing, scheduling/result-TTL, per-job visibility-timeout/lease,
-dead-letter с max-retries и версионирование payload уровня Temporal/arq — для этого
-взяли бы готовый фреймворк, если появится продовый объём. Worker'ы stateless, состояние
-run-ов — в durable store.
+heartbeat/sweeper + effectively-once + **dead-letter queue с max-retries** (`Job.attempts`,
+`_MAX_ATTEMPTS=5`, очередь `workbench:jobs:dead` — poison message не зацикливается, а
+паркуется; глубина через `dead_letter_count()`). Чего ещё НЕ делаем (намеренно): true
+exactly-once с partial-result checkpointing, per-job visibility-timeout/lease (reclaim
+только просроченных, а не всего processing на старте), scheduling/result-TTL и
+версионирование payload уровня Temporal/arq — для этого взяли бы готовый фреймворк, если
+появится продовый объём. DLQ оставлен, т.к. это стандартная гигиена очереди, а не
+durable-execution-машинерия. Worker'ы stateless, состояние run-ов — в durable store.
 
 **Связи:** [[adr-006-custom-trace-schema]] · [[adr-007-predictable-orchestration]]
 (HITL gates) · [[observability]] · [[service-oriented-core]] (Agent Runtime)

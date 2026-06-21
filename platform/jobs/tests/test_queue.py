@@ -63,6 +63,16 @@ class _FakeRedis:
     async def lpush(self, key, val):
         self.lists.setdefault(key, []).insert(0, val)
 
+    async def lpop(self, key):
+        lst = self.lists.get(key)
+        return lst.pop(0) if lst else None
+
+    async def rpush(self, key, val):
+        self.lists.setdefault(key, []).append(val)
+
+    async def llen(self, key):
+        return len(self.lists.get(key, []))
+
     def _pop(self, key, pos):
         lst = self.lists.get(key)
         if not lst:
@@ -197,6 +207,35 @@ async def test_two_workers_crash_midjob_reclaim_reruns_without_double_work(monke
     assert expensive_runs == ["run-1"]  # effectively-once: executed once
     assert not fake.lists.get(q._REDIS_PROCESSING_KEY)  # finally acked
     assert run_status == {"run-1": "completed"}
+
+
+async def test_reclaim_bumps_attempts(monkeypatch):
+    fake = _install_fake_redis(monkeypatch)
+    rq = q.RedisQueue("redis://x")
+    fake.lists[q._REDIS_PROCESSING_KEY] = [Job(kind="demo", run_id="r1").model_dump_json()]
+    assert await rq.reclaim() == 1
+    requeued = Job.model_validate_json(fake.lists[q._REDIS_LIST_KEY][0])
+    assert requeued.attempts == 1  # one orphan-recovery recorded
+
+
+async def test_poison_job_goes_to_dead_letter_after_max_attempts(monkeypatch):
+    fake = _install_fake_redis(monkeypatch)
+    rq = q.RedisQueue("redis://x")
+    # A job already at the attempt ceiling: the next reclaim must dead-letter it,
+    # not re-queue it — so a poison message can't loop forever.
+    poisoned = Job(kind="demo", run_id="r1", attempts=q._MAX_ATTEMPTS)
+    fake.lists[q._REDIS_PROCESSING_KEY] = [poisoned.model_dump_json()]
+    assert await rq.reclaim() == 0  # not re-queued
+    assert not fake.lists.get(q._REDIS_LIST_KEY)  # main queue stays empty
+    assert await rq.dead_letter_count() == 1  # parked in the DLQ instead
+
+
+async def test_unparseable_orphan_is_dead_lettered(monkeypatch):
+    fake = _install_fake_redis(monkeypatch)
+    rq = q.RedisQueue("redis://x")
+    fake.lists[q._REDIS_PROCESSING_KEY] = ["{not valid json"]
+    assert await rq.reclaim() == 0
+    assert await rq.dead_letter_count() == 1
 
 
 def test_job_rejects_untrusted_kind_and_run_id():

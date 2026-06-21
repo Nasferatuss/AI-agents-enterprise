@@ -35,6 +35,11 @@ _REDIS_LIST_KEY = "workbench:jobs"
 # In-flight jobs live here between pop and ack, so a worker crash mid-job leaves the
 # job recoverable (reclaimed on the next worker start) instead of lost.
 _REDIS_PROCESSING_KEY = "workbench:jobs:processing"
+# A job that keeps getting orphaned (a poison message that crashes its worker every
+# time, or an unparseable payload) is moved here after _MAX_ATTEMPTS reclaims, instead
+# of looping forever. Inspect/drain out-of-band; nothing auto-consumes it.
+_REDIS_DLQ_KEY = "workbench:jobs:dead"
+_MAX_ATTEMPTS = 5
 
 
 class Job(BaseModel):
@@ -44,6 +49,9 @@ class Job(BaseModel):
     kind: str = Field(pattern=r"^[a-z][a-z0-9_]{0,31}$")
     run_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")
     payload: dict = {}
+    # Reclaim count: bumped each time a worker crash leaves this job orphaned and the
+    # next startup recovers it. Past _MAX_ATTEMPTS it goes to the dead-letter queue.
+    attempts: int = 0
 
 
 def register_handler(kind: str, handler: JobHandler) -> None:
@@ -95,13 +103,41 @@ class RedisQueue:
     async def reclaim(self) -> int:
         """Move jobs orphaned in the processing list (a worker died between pop and
         ack) back onto the main queue, so they're retried rather than lost. Call on
-        worker startup. Returns how many were reclaimed."""
+        worker startup. Returns how many were re-queued (excludes dead-lettered).
+
+        Each reclaim bumps the job's ``attempts``; once it exceeds ``_MAX_ATTEMPTS``
+        (or its payload is unparseable) the job is moved to the dead-letter queue
+        instead of looping forever — a poison message can't wedge the worker."""
         moved = 0
-        while await self._redis.lmove(_REDIS_PROCESSING_KEY, _REDIS_LIST_KEY, "LEFT", "RIGHT"):
+        while True:
+            raw = await self._redis.lpop(_REDIS_PROCESSING_KEY)
+            if raw is None:
+                break
+            try:
+                job = Job.model_validate_json(raw)
+            except Exception as exc:  # noqa: BLE001 — an unparseable orphan goes straight to DLQ
+                log.warning("dead-lettering unparseable orphan", error=str(exc))
+                await self._redis.rpush(_REDIS_DLQ_KEY, raw)
+                continue
+            job.attempts += 1
+            if job.attempts > _MAX_ATTEMPTS:
+                log.warning(
+                    "job exceeded max attempts → dead-letter",
+                    kind=job.kind,
+                    run_id=job.run_id,
+                    attempts=job.attempts,
+                )
+                await self._redis.rpush(_REDIS_DLQ_KEY, job.model_dump_json())
+                continue
+            await self._redis.rpush(_REDIS_LIST_KEY, job.model_dump_json())
             moved += 1
         if moved:
             log.info("reclaimed orphaned jobs", count=moved)
         return moved
+
+    async def dead_letter_count(self) -> int:
+        """How many jobs are parked in the dead-letter queue (for ops/monitoring)."""
+        return int(await self._redis.llen(_REDIS_DLQ_KEY))
 
     async def consume_forever(self) -> None:
         """Worker loop (at-least-once): atomically move a job to the processing list,
