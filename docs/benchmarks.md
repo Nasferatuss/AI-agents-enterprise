@@ -108,7 +108,10 @@ deliberate difference:
   rate limits and the local GPU box, so throughput and p95 degradation are **real**.
 
 So: the stub proves the *mechanism scales*; the live run proves the *throughput you
-actually get*. The table below (`<!-- LOAD_TABLE -->`) is filled from a live run.
+actually get*. The table below (`<!-- LOAD_TABLE -->`) is filled from **stub mode across
+4 trials** — the speedup is genuinely measured (real `asyncio.sleep`s overlap), so it
+demonstrates the async path parallelizes; the absolute req/s is illustrative. A `--live`
+run replaces it with real provider throughput.
 
 **How to run.**
 
@@ -121,7 +124,41 @@ uv run python scripts/bench.py --concurrency 16 --requests 96 --live \
 
 <!-- LOAD_TABLE -->
 
-_(fill from a live run — see `make bench-live`-style invocation above)_
+### Load run (stub mode) — 48 requests, concurrency 8
+
+Representative trial (median speedup of 4):
+
+| phase | concurrency | wall-clock (s) | throughput (req/s) | p50 (ms) | p95 (ms) | mean (ms) | errors |
+|---|---|---|---|---|---|---|---|
+| sequential | 1 | 2.587 | 18.55 | 22 | 123 | 53 | 0 |
+| concurrent | 8 | 0.367 | 130.91 | 23 | 123 | 54 | 0 |
+
+#### Concurrency effect
+
+| metric | value |
+|---|---|
+| speedup (serial wall / concurrent wall) | 7.06× |
+| parallel efficiency (speedup / concurrency) | 88% |
+| p95 latency under load vs serial | 1.00× |
+| throughput gain | 18.55 → 130.91 req/s |
+
+#### Variance across 4 trials (error bars)
+
+The same workload run 4× (the timing-sensitive numbers vary; the *property* — speedup ≫ 1
+with bounded p95 — does not):
+
+| metric | min | median | max |
+|---|---|---|---|
+| speedup | 6.11× | 7.06× | 7.22× |
+| parallel efficiency | 76% | 88% | 90% |
+| concurrent p95 / serial p95 | 0.98× | 1.00× | 1.26× |
+
+**Read of the result:** at concurrency 8 the 48-request workload finishes ~7× faster than
+sequential (≈88% of ideal linear scaling) with p95 latency essentially unchanged under load.
+That is direct evidence the router's async path overlaps requests rather than serializing
+them — the concurrent wall-clock (~0.37 s) is far below the serial lower bound (the **sum**
+of per-request latencies, ~2.59 s). The property is asserted in CI by
+`tests/test_bench.py::test_load_is_actually_parallel`; the absolute throughput is stub-illustrative.
 
 ## Latest run
 

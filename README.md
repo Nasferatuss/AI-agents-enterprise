@@ -147,6 +147,8 @@ make ui        # demo console on :3000
 ## Docs
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — layers, request lifecycle, durability & security boundary
+- [`docs/request-lifecycle.md`](docs/request-lifecycle.md) — one request end-to-end, with the real trace it writes
+- [`docs/rag-eval.md`](docs/rag-eval.md) — retrieval eval report (hit_rate/MRR/precision) + the CI regression gate
 - [`docs/setup.md`](docs/setup.md) — wire up real models (local Ollama on a GPU box, or provider keys)
 - [`docs/demo.md`](docs/demo.md) — 5-minute guided tour
 - [`docs/deploy.md`](docs/deploy.md) — full-stack Docker + public-demo deployment

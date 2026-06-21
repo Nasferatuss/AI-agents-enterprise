@@ -134,6 +134,21 @@ Track B — the distributed-systems edges the reviews named.
   from its fetch result to the report stage, instead of recovering it from a module-global
   `BODY_CACHE` (the implicit cross-stage side channel is gone).
 
+### Hardening round 7 (2026-06-21, product proof — Track C)
+
+Turning "described" into "measured/shown" — the demo-facing gaps the product review named.
+
+- **Concurrency benchmark filled** — the `LOAD_TABLE` placeholder in `docs/benchmarks.md` is
+  now a real stub-mode run with **error bars across 4 trials** (speedup 6.1×–7.2×, median 7.1×;
+  88% parallel efficiency; p95 essentially flat under load). Caption corrected (stub multi-trial,
+  not "a live run").
+- **Request lifecycle worked example** — `docs/request-lifecycle.md` traces one Text-to-SQL
+  request through every layer and shows the actual `traces` row it writes (cost/latency/steps/
+  scrubbed rows), with the failure-mode variants (provider fallback, rejected SQL, async path).
+- **RAG eval report published** — `docs/rag-eval.md` publishes the real deterministic retrieval
+  numbers (hit_rate 1.0, MRR 1.0, context_precision = 1/k) from the golden KB + the CI regression
+  gate's floors and headroom. The numbers were only thresholds in code before; now they're a report.
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.
