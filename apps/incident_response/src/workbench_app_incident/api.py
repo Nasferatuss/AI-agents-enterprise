@@ -4,7 +4,7 @@ Closes the loop with observability: it lists the failed runs the trace store
 already captured and produces an RCA for any of them.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from workbench_app_incident.classify import classify
@@ -27,7 +27,7 @@ class Incident(BaseModel):
 
 
 @router.get("", response_model=list[Incident])
-async def incidents(limit: int = 50) -> list[Incident]:
+async def incidents(limit: int = Query(default=50, ge=1, le=500)) -> list[Incident]:
     """Failed runs from the trace store (status != completed)."""
     out: list[Incident] = []
     for t in await list_traces(limit=limit):
