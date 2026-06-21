@@ -1,5 +1,6 @@
 """Rate-limiter client identity: socket peer by default, X-Forwarded-For when trusted."""
 
+from collections import deque
 from types import SimpleNamespace
 
 from workbench_gateway.security import RateLimitMiddleware
@@ -29,3 +30,13 @@ def test_client_ip_trusts_forwarded_when_enabled(monkeypatch):
         assert ip == "1.2.3.4"  # first hop = real client
     finally:
         get_settings.cache_clear()
+
+
+def test_reap_idle_drops_silent_ips_keeps_active():
+    mw = RateLimitMiddleware(app=None)
+    now = 1000.0
+    mw._hits["idle"] = deque([now - 120])  # last hit > window ago → reapable
+    mw._hits["active"] = deque([now - 5])  # within window → kept
+    mw._hits["empty"] = deque()  # never any hits → reapable
+    mw._reap_idle(now)  # last_cleanup=0 so the interval gate is open
+    assert set(mw._hits) == {"active"}  # idle + empty buckets freed, no unbounded leak

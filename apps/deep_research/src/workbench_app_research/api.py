@@ -64,8 +64,8 @@ async def research(req: ResearchRequest) -> ResearchReport:
         elif get_settings().research_live_web:
             # Real web research: web_search via DuckDuckGo, fetch downloads URLs.
             # Same ToolSpec names as the corpus, so run_research is unchanged; a
-            # network failure degrades to empty results (see web.py), and the
-            # corpus stays available as the report-text fallback (_source_text).
+            # network failure degrades to empty results (see web.py). The report
+            # stage gets each body straight from its fetch result (no side channel).
             # Fresh per request → clean in-memory audit; sink persists it durably.
             gateway = attach_audit_sink(build_live_gateway())
             report = await run_research(get_router(), gateway, req.question)

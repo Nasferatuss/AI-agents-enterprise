@@ -61,6 +61,13 @@ async def lifespan(app: FastAPI):
             sweeper.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await sweeper
+        # Close the shared model-router HTTP client so its connection pool doesn't
+        # leak across a reload; drop the cached singleton so a restart rebuilds it.
+        from workbench_runtime import get_router
+
+        with contextlib.suppress(Exception):
+            await get_router().aclose()
+        get_router.cache_clear()
 
 
 def create_app() -> FastAPI:

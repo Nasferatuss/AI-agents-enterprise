@@ -115,6 +115,25 @@ Acted on the round-3 multi-agent review's residual findings (Track A).
 - **Cleanups** — `assert resp` → explicit raise (survives `python -O`); three duplicate
   `_add_cost` helpers consolidated onto `workbench_runtime._util.add_cost`.
 
+### Hardening round 6 (2026-06-21, robustness depth)
+
+Track B — the distributed-systems edges the reviews named.
+
+- **Bounded rate-limiter memory** — idle per-IP windows are now reaped periodically, so a
+  scan/DDoS of many distinct IPs can't leak the limiter's dict unbounded for the process life.
+- **Atomic stuck-run sweep** — `sweep_stuck_runs` is a single conditional
+  `UPDATE … WHERE status='running'` instead of select-then-mutate, so a run that completes
+  concurrently is never clobbered to `failed` (lost-update closed).
+- **Fixed-width run timestamps** — the real fragility behind the "ISO strings sort as dates"
+  note: `datetime.isoformat()` drops the fractional part at whole seconds, which mis-sorts
+  within a second. `_fmt` now emits fixed-width `…%H:%M:%S.%fZ` for every writer (string
+  columns kept deliberately — `agent_runs` is a transient operational table, sqlite is dev/test).
+- **Router client lifecycle** — the gateway closes the shared model-router `httpx` client on
+  shutdown (no connection-pool leak across reloads).
+- **Explicit body threading** — `deep_research` now passes each fetched source body straight
+  from its fetch result to the report stage, instead of recovering it from a module-global
+  `BODY_CACHE` (the implicit cross-stage side channel is gone).
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

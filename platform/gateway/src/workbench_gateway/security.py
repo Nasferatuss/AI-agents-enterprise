@@ -86,9 +86,26 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
+    # Per-IP windows are pruned on access, but an IP that sends one burst and goes
+    # silent would otherwise keep its (empty) deque forever — an unbounded leak under
+    # a scan/DDoS of many distinct IPs. Sweep fully-aged-out IPs periodically.
+    _CLEANUP_INTERVAL_S = 60.0
+    _WINDOW_S = 60.0
+
     def __init__(self, app):
         super().__init__(app)
         self._hits: dict[str, deque[float]] = defaultdict(deque)
+        self._last_cleanup = 0.0
+
+    def _reap_idle(self, now: float) -> None:
+        if now - self._last_cleanup < self._CLEANUP_INTERVAL_S:
+            return
+        # Drop IPs whose most-recent hit is older than the window — their bucket is
+        # empty for rate-limiting purposes, so the dict entry is pure overhead.
+        stale = [ip for ip, dq in self._hits.items() if not dq or now - dq[-1] > self._WINDOW_S]
+        for ip in stale:
+            del self._hits[ip]
+        self._last_cleanup = now
 
     @staticmethod
     def _client_ip(request: Request) -> str:
@@ -106,8 +123,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if limit and request.method == "POST" and request.url.path.startswith(_PROTECTED):
             client = self._client_ip(request)
             now = time.monotonic()
+            self._reap_idle(now)
             window = self._hits[client]
-            while window and now - window[0] > 60:
+            while window and now - window[0] > self._WINDOW_S:
                 window.popleft()
             if len(window) >= limit:
                 log.warning("rate limit exceeded", client=client, path=request.url.path)

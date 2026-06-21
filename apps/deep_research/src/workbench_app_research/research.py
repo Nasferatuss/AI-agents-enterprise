@@ -85,6 +85,7 @@ async def run_research(
 
     # 2. research — drive the gateway tools under the allowlist
     sources: list[Source] = []
+    bodies: dict[str, str] = {}  # url -> fetched body, threaded explicitly to the report stage
     seen: set[str] = set()
     for sq in sub_questions:
         search = await gateway.call("web_search", {"query": sq}, allowlist=allowlist)
@@ -96,10 +97,13 @@ async def run_research(
             if fetched.allowed and not fetched.error and fetched.output:
                 seen.add(url)
                 sources.append(Source(n=len(sources) + 1, url=url, title=fetched.output["title"]))
+                # Capture the body NOW (the fetch result has it) instead of recovering it
+                # later from a module-global cache — no implicit cross-stage side channel.
+                bodies[url] = fetched.output.get("text", "")
 
     # 3. report (with verification baked into the prompt)
     numbered = "\n\n".join(
-        f"[{s.n}] {s.title} ({s.url})\n{_source_text(gateway, s.url)}" for s in sources
+        f"[{s.n}] {s.title} ({s.url})\n{bodies.get(s.url, '')}" for s in sources
     )
     report_out = await router.step(
         [UserMessage(content=f"Question: {question}\n\nSources:\n{numbered}")],
@@ -119,19 +123,3 @@ async def run_research(
         model=report_out.model,
         cost_usd=cost,
     )
-
-
-def _source_text(gateway: ToolGateway, url: str) -> str:
-    """Recover the fetched body for `url` for the report stage.
-
-    Live-web runs cache real bodies in ``web.BODY_CACHE`` during the research
-    loop (the gateway keeps no payloads); corpus runs fall back to ``CORPUS``.
-    """
-    from workbench_capabilities.web import BODY_CACHE
-
-    if url in BODY_CACHE:
-        return BODY_CACHE[url].get("text", "")
-
-    from workbench_toolgateway.corpus import CORPUS
-
-    return CORPUS.get(url, {}).get("text", "")

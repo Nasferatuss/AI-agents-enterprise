@@ -148,8 +148,6 @@ async def test_pipeline_cites_real_urls_with_live_connectors(monkeypatch):
     assert all(a.allowed for a in report.tool_calls)
     assert "[1]" in report.report
 
-    # the report's numbered sources carried real fetched text (via BODY_CACHE)
-    from workbench_app_research.research import _source_text
-
+    # the live fetcher really pulled each cited source's body (its own bounded cache)
     for s in report.sources:
-        assert _source_text(gw, s.url).strip()
+        assert web.BODY_CACHE[s.url]["text"].strip()

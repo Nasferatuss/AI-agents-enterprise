@@ -17,7 +17,7 @@ degrades to the old in-memory behavior instead of breaking the request.
 
 import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from workbench_observability.db import get_sessionmaker
@@ -32,8 +32,24 @@ log = get_logger(__name__)
 NON_TERMINAL_RUN_STATUSES = ("pending", "running")
 
 
+# Run-store timestamps are compared/sorted as plain strings (the sweep's `<`, the
+# list `ORDER BY`). For that to equal chronological order the format must be
+# FIXED-WIDTH: `datetime.isoformat()` silently DROPS the fractional part when
+# microseconds == 0 ("…:55+00:00" vs "…:55.000001+00:00"), and "+" < "." so a
+# whole-second stamp would mis-sort within its second. Format explicitly instead —
+# always 6-digit microseconds + a 'Z' — so every writer is byte-comparable. (We keep
+# string columns rather than a timestamptz migration on purpose: agent_runs is a
+# transient operational table, sqlite is the dev/test backend, and a fixed-width UTC
+# string removes the fragility without a live-data schema change.)
+_TS_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+def _fmt(dt: datetime.datetime) -> str:
+    return dt.strftime(_TS_FORMAT)
+
+
 def _utc_now() -> str:
-    return datetime.datetime.now(datetime.UTC).isoformat()
+    return _fmt(datetime.datetime.now(datetime.UTC))
 
 
 def _to_record(row: AgentRun) -> RunRecord:
@@ -199,26 +215,32 @@ async def sweep_stuck_runs(ttl_seconds: int) -> int:
 
     Catches a worker that hung without either crashing (reconcile handles that) or
     finishing — otherwise the run stays `running` forever. Returns how many it failed.
-    ISO-8601 timestamps sort chronologically as strings, so the comparison is a plain
-    ``<`` on the stored value.
+    Timestamps are fixed-width UTC strings (see ``_fmt``), so the cutoff comparison is
+    a plain ``<`` that matches chronological order.
+
+    A single conditional ``UPDATE ... WHERE status='running'`` (not select-then-mutate)
+    so a run that completes concurrently is not clobbered: if the handler's terminal
+    write lands first the row is no longer ``running`` and this UPDATE skips it; if the
+    sweep lands first the handler's authoritative write still wins. No lost update.
     """
-    cutoff = (
-        datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=ttl_seconds)
-    ).isoformat()
+    cutoff = _fmt(datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=ttl_seconds))
     try:
         async with get_sessionmaker()() as session:
-            stmt = select(AgentRun).where(
-                AgentRun.status == "running", AgentRun.updated_at < cutoff
+            stmt = (
+                update(AgentRun)
+                .where(AgentRun.status == "running", AgentRun.updated_at < cutoff)
+                .values(
+                    status="failed",
+                    error=f"no heartbeat for >{ttl_seconds}s — presumed dead",
+                    updated_at=_utc_now(),
+                )
             )
-            rows = (await session.execute(stmt)).scalars().all()
-            for row in rows:
-                row.status = "failed"
-                row.error = f"no heartbeat for >{ttl_seconds}s — presumed dead"
-                row.updated_at = _utc_now()
+            result = await session.execute(stmt)
             await session.commit()
-            if rows:
-                log.warning("swept stuck runs", count=len(rows), ttl_s=ttl_seconds)
-            return len(rows)
+            count = result.rowcount or 0
+            if count:
+                log.warning("swept stuck runs", count=count, ttl_s=ttl_seconds)
+            return count
     except Exception as exc:  # noqa: BLE001
         log.warning("stuck-run sweep failed", error=str(exc))
         return 0
