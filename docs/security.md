@@ -16,7 +16,7 @@ for a public demo. The relevant adversaries:
 
 ## Controls (implemented & tested)
 
-### Read-only SQL execution (ADR-004) — `apps/text2sql/safe_sql.py`
+### Read-only SQL execution (ADR-004) — `platform/capabilities/sql_guard.py`
 
 Defense in depth; every layer is exercised by `tests/test_sql_injection.py`:
 
