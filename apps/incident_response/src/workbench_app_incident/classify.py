@@ -33,7 +33,9 @@ def classify(
         steps = payload.get("steps")
         n = len(steps) if isinstance(steps, list) else payload.get("num_steps", "?")
         return "loop_no_progress", [f"agent hit the step budget without finishing ({n} steps)"]
-    if "no provider" in err:
+    # Matches both the router's client-safe message ("no model provider is currently
+    # available…") and older "no provider succeeded" trace text.
+    if "no provider" in err or "no model provider" in err:
         return "provider_unavailable", [
             "no model provider succeeded — check API keys or the local model endpoint"
         ]

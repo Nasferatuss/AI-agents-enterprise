@@ -16,6 +16,19 @@ def clean_env(monkeypatch):
     return monkeypatch
 
 
+def test_suite_is_hermetic_provider_keys_stripped():
+    # Sentinel for the root conftest's hermetic env (the P0 fix). Runs in CI on every
+    # pytest. If a change ever lets a developer's real .env leak provider keys into the
+    # test process, this fails loudly here — instead of silently flipping the
+    # "no provider -> 503" tests green-in-CI / red-on-a-laptop-with-keys.
+    import os
+
+    for env in ALL_KEY_ENVS + ["MIMO_API_KEY"]:
+        assert os.environ.get(env) is None, f"{env} leaked into the test environment"
+    enabled = {name for name, p in build_registry().items() if p.enabled}
+    assert enabled == {"local"}, f"only the keyless local provider should be enabled, got {enabled}"
+
+
 def test_chain_local_only_without_keys(clean_env):
     router = ModelRouter(registry=build_registry())
     assert router.chain("simple") == [("local", "default")]

@@ -1,5 +1,6 @@
 """Workflow Orchestrator endpoints (mounted by the gateway)."""
 
+import hmac
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
@@ -29,7 +30,8 @@ def _check_approval_token(provided: str | None) -> None:
     (local demo); enforced when configured so the governance control isn't a
     purely self-attested actor string."""
     required = get_settings().approval_token
-    if required and provided != required:
+    # constant-time compare, consistent with the gateway API-key gate (no timing oracle).
+    if required and not hmac.compare_digest(provided or "", required):
         raise HTTPException(status_code=401, detail="invalid or missing approval token")
 
 

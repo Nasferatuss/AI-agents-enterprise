@@ -65,3 +65,10 @@ async def test_ingest_rejects_oversize_document(client):
         json={"documents": [{"source": "big.md", "text": "x" * 200_001}]},
     )
     assert resp.status_code == 422  # per-document char cap
+
+
+async def test_search_rejects_oversize_query(client):
+    resp = await client.post(
+        "/v1/rag/indexes/kb/search", json={"query": "x" * 4_001}
+    )
+    assert resp.status_code == 422  # query char cap before it hits the embedder

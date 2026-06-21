@@ -49,8 +49,21 @@ async def test_chat_routes_through_router(client, monkeypatch):
 async def test_chat_503_when_no_provider(client, monkeypatch):
     class FailingRouter:
         async def complete(self, **kwargs):
-            raise NoProviderAvailableError("standard", [])
+            raise NoProviderAvailableError("standard", ["anthropic/claude-opus-4-8"])
 
     monkeypatch.setattr(llm, "get_router", lambda: FailingRouter())
     resp = await client.post("/v1/chat", json={"messages": [{"role": "user", "content": "x"}]})
     assert resp.status_code == 503
+    # the client-facing 503 must NOT leak internal provider/model names (topology)
+    detail = resp.json()["detail"].lower()
+    assert "claude" not in detail and "anthropic" not in detail and "opus" not in detail
+
+
+async def test_chat_rejects_oversize_transcript(client):
+    # total content over the boundary cap → 422 before reaching any provider
+    big = "x" * 130_000
+    resp = await client.post(
+        "/v1/chat",
+        json={"messages": [{"role": "user", "content": big}, {"role": "user", "content": big}]},
+    )
+    assert resp.status_code == 422

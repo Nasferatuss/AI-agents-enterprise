@@ -149,6 +149,24 @@ Turning "described" into "measured/shown" — the demo-facing gaps the product r
   numbers (hit_rate 1.0, MRR 1.0, context_precision = 1/k) from the golden KB + the CI regression
   gate's floors and headroom. The numbers were only thresholds in code before; now they're a report.
 
+### Hardening round 8 (2026-06-21, final-review residuals)
+
+Closed the remaining low-severity findings from the final multi-agent review; +4 tests (322 passing).
+
+- **Timing-safe approval token** — the workflow approve/reject gate now uses
+  `hmac.compare_digest` (was `!=`), consistent with the gateway API-key gate.
+- **No backend-topology leak on 503** — `NoProviderAvailableError`'s client message is now
+  generic ("no model provider is currently available…"); the provider/model attempt list stays
+  on `.attempts`/`.complexity` for server logs. Fixes the leak across all 13 routes at one point
+  (and the incident classifier learned the new wording, with a regression row).
+- **Input caps at the gateway boundary** — `/v1/chat` bounds message count, per-field size, and
+  total transcript chars; RAG `search` query is capped (4k) before it reaches the embedder.
+- **Qdrant client lifecycle** — the gateway closes the Qdrant client singleton on shutdown
+  (only if a request built it), symmetric to the model-router client.
+- **P0 regression sentinel** — `test_suite_is_hermetic_provider_keys_stripped` asserts in CI that
+  provider keys are stripped and only the keyless `local` provider is enabled, so a future `.env`
+  leak fails loudly here instead of silently un-hermeticizing the suite.
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

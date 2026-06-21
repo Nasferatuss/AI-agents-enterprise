@@ -51,10 +51,13 @@ _HEALTH_COOLDOWN_S = 30.0
 
 class NoProviderAvailableError(Exception):
     def __init__(self, complexity: Complexity, attempts: list[str]):
+        self.complexity = complexity
         self.attempts = attempts
-        super().__init__(
-            f"no provider succeeded for complexity={complexity}; tried: {attempts or 'none'}"
-        )
+        # Client-safe message (many routes surface str(exc) as the 503 detail): no
+        # provider/model names, which would map the backend topology to any caller who
+        # triggers a 503. The detailed attempt list stays on .attempts / .complexity
+        # for server-side logging.
+        super().__init__("no model provider is currently available for this request")
 
 
 class ModelRouter:

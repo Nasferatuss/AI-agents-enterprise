@@ -18,6 +18,8 @@ from workbench_runtime.router import ModelRouter
         ("workflow", "rejected", "rejected by bob", {}, "policy_rejection"),
         ("agent", "max_steps_reached", "max_steps_reached", {}, "loop_no_progress"),
         ("agent", "failed", "no provider succeeded", {}, "provider_unavailable"),
+        # the router's actual client-safe message must classify the same way
+        ("agent", "failed", "no model provider is currently available", {}, "provider_unavailable"),
         ("agent", "failed", "execution failed: no such column", {}, "sql_error"),
         ("agent", "failed", "2 scenario(s) failed", {}, "scenario_failures"),
         ("eval", "failed", "low quality", {"aggregates": {"hit_rate": 0.3}}, "low_eval_quality"),

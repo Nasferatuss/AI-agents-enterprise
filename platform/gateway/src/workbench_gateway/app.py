@@ -68,6 +68,13 @@ async def lifespan(app: FastAPI):
         with contextlib.suppress(Exception):
             await get_router().aclose()
         get_router.cache_clear()
+        # Same for the Qdrant client singleton, but only if a request actually built it.
+        from workbench_gateway.routes.rag import _qdrant
+
+        if _qdrant.cache_info().currsize:
+            with contextlib.suppress(Exception):
+                await _qdrant().close()
+            _qdrant.cache_clear()
 
 
 def create_app() -> FastAPI:
