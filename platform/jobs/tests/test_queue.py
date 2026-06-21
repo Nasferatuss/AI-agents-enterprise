@@ -141,6 +141,64 @@ async def test_redis_reclaim_returns_orphaned_jobs(monkeypatch):
     assert fake.lists[q._REDIS_LIST_KEY]  # back on the main queue
 
 
+async def test_two_workers_crash_midjob_reclaim_reruns_without_double_work(monkeypatch):
+    """End-to-end distributed proof — the reviewer's exact scenario.
+
+    Worker A dies *after* the costly side effect but *before* the ack; worker B,
+    a fresh process on the SAME Redis, reclaims the stranded job and re-delivers
+    it. At-least-once means the handler is invoked twice; the effectively-once
+    guard (skip a run already in a terminal state) means the expensive work runs
+    exactly ONCE. Two deliveries, one execution — that is the whole guarantee.
+
+    The real autonomous handler does the same terminal-status check against the
+    durable run store (apps/autonomous_agent .../api.py: ``_execute_run`` returns
+    early when ``get_run`` is already terminal). Here a dict stands in for that
+    store so the proof stays at the queue layer and network-free.
+    """
+    fake = _install_fake_redis(monkeypatch)
+    run_status: dict[str, str] = {}  # the durable run store's status column, in miniature
+    deliveries: list[str] = []  # every handler invocation (at-least-once may repeat)
+    expensive_runs: list[str] = []  # the costly side effect (must happen once)
+
+    async def handler(run_id, payload):
+        deliveries.append(run_id)
+        if run_status.get(run_id) in ("completed", "failed"):
+            return  # effectively-once: already done — don't redo the expensive run
+        expensive_runs.append(run_id)  # the one costly LLM run
+        run_status[run_id] = "completed"  # persist terminal state
+
+    register_handler("autonomous", handler)
+
+    # --- Worker A: pop → run side effect → CRASH before the lrem ack ---
+    qa = q.RedisQueue("redis://shared")
+    await qa.enqueue(Job(kind="autonomous", run_id="run-1", payload={"goal": "x"}))
+    raw = await fake.blmove(q._REDIS_LIST_KEY, q._REDIS_PROCESSING_KEY, 5, "RIGHT", "LEFT")
+    await q.dispatch(Job.model_validate_json(raw))  # side effect happens here
+    # process dies now: no ack. The job is stranded in the processing list.
+    assert expensive_runs == ["run-1"]
+    assert fake.lists[q._REDIS_PROCESSING_KEY] == [raw]  # orphaned, not acked
+
+    # --- Worker B: fresh process on the same Redis → reclaim + re-deliver ---
+    qb = q.RedisQueue("redis://shared")
+    assert await qb.reclaim() == 1  # orphan moved back onto the main queue
+    worker = asyncio.create_task(qb.consume_forever())
+    for _ in range(50):
+        await asyncio.sleep(0)
+        drained = not fake.lists.get(q._REDIS_LIST_KEY) and not fake.lists.get(
+            q._REDIS_PROCESSING_KEY
+        )
+        if drained and len(deliveries) >= 2:
+            break
+    worker.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await worker
+
+    assert deliveries == ["run-1", "run-1"]  # at-least-once: delivered twice
+    assert expensive_runs == ["run-1"]  # effectively-once: executed once
+    assert not fake.lists.get(q._REDIS_PROCESSING_KEY)  # finally acked
+    assert run_status == {"run-1": "completed"}
+
+
 def test_job_rejects_untrusted_kind_and_run_id():
     import pytest as _pytest
     from pydantic import ValidationError

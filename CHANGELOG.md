@@ -79,6 +79,23 @@ Acted on a multi-agent code/security/architecture/product review.
 - **Qdrant auth** — `WB_QDRANT_API_KEY` (compose `QDRANT__SERVICE__API_KEY` + client),
   matching the Redis password support.
 
+### Hardening round 4 (2026-06-21, credibility + distributed proof)
+
+- **Hermetic test suite** — the root `conftest.py` now neuters `load_dotenv` and
+  strips all provider keys, so the "no provider → 503" tests and `test_router` no
+  longer depend on a developer's local `.env` leaking real keys. The suite is green
+  from a clean clone whether or not `.env` is present (was 7 failed / 303 passed for
+  a reviewer who cloned with keys; now 310 passed). Makes the "network-free" claim
+  actually true on any machine.
+- **Distributed delivery, demonstrated** — `docs/distributed.md` plus a deterministic
+  end-to-end test (`test_two_workers_crash_midjob_reclaim_reruns_without_double_work`):
+  worker A dies after the side effect but before the ack, worker B reclaims the orphan
+  and re-delivers — two deliveries, one execution. Converts "distributed (in code)"
+  into "distributed (proven + documented)". ADR-010 now states the in-process
+  single-replica topology boundary explicitly.
+- **Doc drift** — `docs/security.md` cited the pre-ADR-001 `apps/text2sql/safe_sql.py`
+  path; the guard lives in `platform/capabilities/sql_guard.py`. README test count → 300+.
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

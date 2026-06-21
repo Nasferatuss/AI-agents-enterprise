@@ -74,11 +74,21 @@ operational persistence, родственная трейсам; observability у
      (run, упавший mid-flight, переисполнится), но дорогая работа над завершёнными
      run-ами не дублируется.
 
-**Граница:** at-least-once + reconciler + race-safe idempotency + heartbeat/sweeper +
-effectively-once. Чего ещё НЕ делаем (намеренно): true exactly-once с partial-result
-checkpointing, scheduling/result-TTL и версионирование payload уровня Temporal/arq —
-для этого взяли бы готовый фреймворк, если появится продовый объём. Worker'ы
-stateless, состояние run-ов — в durable store.
+**Граница топологии (важно и честно):** in-process backend корректен только на
+**одной** реплике gateway — его reconciler и sweeper работают per-process, поэтому N
+реплик независимо переэнкьюивали бы одни и те же осиротевшие runs → до N конкурентных
+переисполнений (effectively-once спасает лишь уже терминальные). Горизонтальный путь —
+это Redis backend с выделенным worker'ом: reclaim/reconcile/sweep принадлежат worker'у,
+а реплики gateway только submit'ят. Проверяемая демонстрация at-least-once +
+effectively-once на двух worker'ах — `docs/distributed.md` + детерминированный тест
+`test_two_workers_crash_midjob_reclaim_reruns_without_double_work`.
+
+**Граница реализации:** at-least-once + reconciler + race-safe idempotency +
+heartbeat/sweeper + effectively-once. Чего ещё НЕ делаем (намеренно): true exactly-once
+с partial-result checkpointing, scheduling/result-TTL, per-job visibility-timeout/lease,
+dead-letter с max-retries и версионирование payload уровня Temporal/arq — для этого
+взяли бы готовый фреймворк, если появится продовый объём. Worker'ы stateless, состояние
+run-ов — в durable store.
 
 **Связи:** [[adr-006-custom-trace-schema]] · [[adr-007-predictable-orchestration]]
 (HITL gates) · [[observability]] · [[service-oriented-core]] (Agent Runtime)
