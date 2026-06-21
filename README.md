@@ -146,11 +146,13 @@ make ui        # demo console on :3000
 
 ## Docs
 
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — layers, request lifecycle, durability & security boundary
 - [`docs/setup.md`](docs/setup.md) — wire up real models (local Ollama on a GPU box, or provider keys)
 - [`docs/demo.md`](docs/demo.md) — 5-minute guided tour
 - [`docs/deploy.md`](docs/deploy.md) — full-stack Docker + public-demo deployment
 - [`docs/security.md`](docs/security.md) — threat model, controls, known limitations
 - [`docs/benchmarks.md`](docs/benchmarks.md) — cost-aware routing benchmark (methodology + numbers)
+- [`docs/distributed.md`](docs/distributed.md) — job-queue delivery guarantees + two-worker crash/reclaim proof
 - [`CHANGELOG.md`](CHANGELOG.md) · [`wiki/00_index.md`](wiki/00_index.md) — knowledge base (architecture, ADRs, roadmap, risks)
 
 ## License
