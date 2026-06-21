@@ -133,6 +133,29 @@ async def test_security_headers_present_on_any_endpoint(client):
         assert resp.headers["X-Content-Type-Options"] == "nosniff"
         assert resp.headers["X-Frame-Options"] == "DENY"
         assert resp.headers["Referrer-Policy"] == "no-referrer"
+        assert "max-age=" in resp.headers["Strict-Transport-Security"]
+
+
+# --- Hardening round 4: timing-safe API key + RAG index validation ---
+
+
+async def test_api_key_gate_rejects_wrong_and_accepts_right(monkeypatch):
+    # The compare is constant-time (hmac.compare_digest); behaviour must be unchanged:
+    # wrong/absent key → 401, correct key → through.
+    monkeypatch.setenv("WB_API_KEY", "s3cret")
+    get_settings.cache_clear()
+    try:
+        transport = httpx.ASGITransport(app=create_app())
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+            assert (await c.get("/v1/agents")).status_code == 401  # no key
+            assert (
+                await c.get("/v1/agents", headers={"X-API-Key": "wrong"})
+            ).status_code == 401
+            ok = await c.get("/v1/agents", headers={"X-API-Key": "s3cret"})
+            assert ok.status_code == 200
+            assert (await c.get("/healthz")).status_code == 200  # non-/v1 stays open
+    finally:
+        get_settings.cache_clear()
 
 
 # --- Finding 4: trace payload scrubs raw DB rows ---

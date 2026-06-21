@@ -9,6 +9,7 @@ The rate limiter is a per-process fixed window — fine for a single instance /
 demo; a multi-instance deployment would move the counter to Redis.
 """
 
+import hmac
 import time
 from collections import defaultdict, deque
 
@@ -30,6 +31,10 @@ _SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
+    # Browsers honour HSTS only over HTTPS (ignored on plain-http localhost), so it is
+    # safe to stamp always; in a real TLS deployment it blocks the first-connection
+    # downgrade. 2 years + subdomains is the conventional strong value.
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
 }
 
 
@@ -70,10 +75,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         key = get_settings().api_key
+        # constant-time compare so a timing side-channel can't reveal the key byte by byte.
         if (
             key
             and request.url.path.startswith(_PROTECTED)
-            and request.headers.get("x-api-key") != key
+            and not hmac.compare_digest(request.headers.get("x-api-key") or "", key)
         ):
             return JSONResponse({"detail": "invalid or missing API key"}, status_code=401)
         return await call_next(request)

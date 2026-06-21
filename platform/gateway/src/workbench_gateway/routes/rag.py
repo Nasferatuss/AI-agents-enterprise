@@ -1,5 +1,6 @@
 """RAG Core endpoints: ingest documents and search indexes."""
 
+import re
 from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException
@@ -21,6 +22,17 @@ from workbench_shared.config import get_settings
 router = APIRouter(prefix="/v1/rag", tags=["rag"])
 
 _COLLECTION_PREFIX = "rag_"
+# The index name becomes a Qdrant collection (`rag_<index>`), so constrain it to a
+# safe charset/length rather than trusting the path segment (no traversal/probing).
+_INDEX_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+
+
+def _require_valid_index(index: str) -> None:
+    if not _INDEX_RE.match(index):
+        raise HTTPException(
+            status_code=422,
+            detail="invalid index name (allowed: ^[a-z0-9][a-z0-9_-]{0,63}$)",
+        )
 
 
 @lru_cache
@@ -40,14 +52,20 @@ def get_pipeline(index: str) -> RagPipeline:
     return RagPipeline(embedder, QdrantStore(_qdrant(), f"{_COLLECTION_PREFIX}{index}"))
 
 
+# Bounds so a single request can't exhaust CPU/memory (chunking + embedding) or
+# blow up Qdrant: cap per-document text and the document count per ingest.
+_MAX_DOC_CHARS = 200_000
+_MAX_DOCS_PER_REQUEST = 500
+
+
 class DocumentIn(BaseModel):
-    source: str
-    text: str = Field(min_length=1)
+    source: str = Field(min_length=1, max_length=512)
+    text: str = Field(min_length=1, max_length=_MAX_DOC_CHARS)
     metadata: dict = {}
 
 
 class IngestRequest(BaseModel):
-    documents: list[DocumentIn] = Field(min_length=1)
+    documents: list[DocumentIn] = Field(min_length=1, max_length=_MAX_DOCS_PER_REQUEST)
 
 
 class SearchRequest(BaseModel):
@@ -74,6 +92,7 @@ async def list_indexes() -> list[IndexInfo]:
 
 @router.post("/indexes/{index}/documents", response_model=IngestStats)
 async def ingest(index: str, req: IngestRequest) -> IngestStats:
+    _require_valid_index(index)
     docs = [from_text(d.source, d.text, d.metadata) for d in req.documents]
     try:
         return await get_pipeline(index).ingest(docs)
@@ -83,6 +102,7 @@ async def ingest(index: str, req: IngestRequest) -> IngestStats:
 
 @router.post("/indexes/{index}/search", response_model=list[ScoredChunk])
 async def search(index: str, req: SearchRequest) -> list[ScoredChunk]:
+    _require_valid_index(index)
     pipeline = get_pipeline(index)
     if not await pipeline.store.exists():
         raise HTTPException(status_code=404, detail=f"unknown index: {index}")

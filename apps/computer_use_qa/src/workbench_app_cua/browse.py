@@ -210,7 +210,7 @@ class LiveBrowseSession:
 def _render_observation(obs: _Observation) -> str:
     lines = [f"TITLE: {obs.title}", f"URL: {obs.url}", "ELEMENTS:"]
     for el in obs.elements:
-        lines.append(f'  [{el["kind"]}] {el["selector"]} — {el["text"]}')
+        lines.append(f"  [{el['kind']}] {el['selector']} — {el['text']}")
     if not obs.elements:
         lines.append("  (none)")
     lines.append("TEXT SNAPSHOT:")

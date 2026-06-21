@@ -14,14 +14,20 @@ from workbench_observability import (
 
 async def test_create_run_dedupes_on_idempotency_key(trace_db):
     r1 = await create_run(
-        run_id="a", kind="autonomous", status="pending", payload={"goal": "x"},
+        run_id="a",
+        kind="autonomous",
+        status="pending",
+        payload={"goal": "x"},
         idempotency_key="k1",
     )
     assert r1.run_id == "a"
     # Second create with the SAME key (different run_id) must hit the UNIQUE and
     # return the original run, not create a duplicate.
     r2 = await create_run(
-        run_id="b", kind="autonomous", status="pending", payload={"goal": "x"},
+        run_id="b",
+        kind="autonomous",
+        status="pending",
+        payload={"goal": "x"},
         idempotency_key="k1",
     )
     assert r2.run_id == "a"

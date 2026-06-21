@@ -42,9 +42,7 @@ def _router() -> ModelRouter:
                 "usage": {"prompt_tokens": 10, "completion_tokens": 5},
             },
             {
-                "choices": [
-                    {"message": {"role": "assistant", "content": "The answer is 4."}}
-                ],
+                "choices": [{"message": {"role": "assistant", "content": "The answer is 4."}}],
                 "usage": {"prompt_tokens": 20, "completion_tokens": 7},
             },
         ]

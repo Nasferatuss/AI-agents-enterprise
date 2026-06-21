@@ -77,8 +77,7 @@ def _patch_live(monkeypatch):
     def _fake_get(url, **kwargs):
         d = _FAKE_HITS[url]
         html = (
-            f"<html><head><title>{d['title']}</title></head>"
-            f"<body><p>{d['text']}</p></body></html>"
+            f"<html><head><title>{d['title']}</title></head><body><p>{d['text']}</p></body></html>"
         )
         return httpx.Response(200, text=html, request=httpx.Request("GET", url))
 

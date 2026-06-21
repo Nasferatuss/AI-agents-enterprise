@@ -54,3 +54,14 @@ async def test_empty_text_422(monkeypatch):
             files={"file": ("doc.txt", b"   \n  ", "text/plain")},
         )
     assert resp.status_code == 422
+
+
+async def test_oversize_upload_413(monkeypatch):
+    # Bigger than _MAX_UPLOAD_BYTES → rejected before parsing, not buffered whole.
+    big = b"x" * (api._MAX_UPLOAD_BYTES + 1)
+    async with await _client(monkeypatch) as c:
+        resp = await c.post(
+            "/v1/apps/compliance/review/file",
+            files={"file": ("doc.txt", big, "text/plain")},
+        )
+    assert resp.status_code == 413

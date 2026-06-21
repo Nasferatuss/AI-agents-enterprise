@@ -14,6 +14,7 @@ from workbench_runtime import get_router
 router = APIRouter(prefix="/v1/apps/compliance", tags=["compliance-reviewer"])
 
 _MAX_DOC_LEN = 20000  # mirrors ReviewRequest.document max_length
+_MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB — bound the upload before it is buffered/parsed
 
 
 class ReviewRequest(BaseModel):
@@ -64,7 +65,14 @@ async def review(req: ReviewRequest) -> RiskReport:
 
 @router.post("/review/file", response_model=RiskReport)
 async def review_file(file: Annotated[UploadFile, File()]) -> RiskReport:
-    text = _extract_text(file.filename or "", file.content_type or "", await file.read())
+    # Read one byte past the cap so we can reject oversize uploads BEFORE parsing
+    # (PdfReader/docx parse the full bytes), instead of buffering an unbounded body.
+    data = await file.read(_MAX_UPLOAD_BYTES + 1)
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413, detail=f"file too large (max {_MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
+        )
+    text = _extract_text(file.filename or "", file.content_type or "", data)
     if not text.strip():
         raise HTTPException(status_code=422, detail="could not extract any text from the file")
     return await _run_review(text[:_MAX_DOC_LEN])  # bound like ReviewRequest.document

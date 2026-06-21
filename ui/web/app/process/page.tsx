@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DOMPurify from "isomorphic-dompurify";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -26,7 +27,12 @@ function MermaidDiagram({ code }: { code: string }) {
         }
         const id = `mermaid-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(id, code);
-        if (!cancelled) setSvg(svg);
+        // mermaid output is derived from LLM-generated text; sanitize before
+        // injecting via dangerouslySetInnerHTML to neutralize any XSS vector.
+        const clean = DOMPurify.sanitize(svg, {
+          USE_PROFILES: { svg: true, svgFilters: true },
+        });
+        if (!cancelled) setSvg(clean);
       } catch {
         if (!cancelled) setFailed(true);
       }

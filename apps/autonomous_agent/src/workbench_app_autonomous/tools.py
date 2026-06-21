@@ -91,9 +91,7 @@ def _make_run_sql_tool(engine: Engine, allowed_tables: set[str]) -> Tool:
 
     async def run_sql(inp: RunSqlInput) -> str:
         try:
-            sql, columns, rows = await execute_sql(
-                engine, inp.sql, allowed_tables, dialect=dialect
-            )
+            sql, columns, rows = await execute_sql(engine, inp.sql, allowed_tables, dialect=dialect)
         except SqlGuardError as exc:
             # Return the guard message as the tool result so the agent self-corrects.
             return f"SQL rejected: {exc}"
@@ -114,8 +112,7 @@ def _make_run_sql_tool(engine: Engine, allowed_tables: set[str]) -> Tool:
         description=(
             "Execute ONE read-only SELECT against the sales/BI database and get "
             f"columns/rows as JSON (max {MAX_ROWS} rows; writes and DDL are rejected). "
-            "Use it whenever the answer needs real data.\n\nSchema:\n"
-            + schema_description(engine)
+            "Use it whenever the answer needs real data.\n\nSchema:\n" + schema_description(engine)
         ),
         input_model=RunSqlInput,
         handler=run_sql,
@@ -196,9 +193,7 @@ class ListFilesInput(BaseModel):
 
 def _list_files(_: ListFilesInput) -> str:
     root = _workspace_root()
-    files = sorted(
-        str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()
-    )
+    files = sorted(str(p.relative_to(root)) for p in root.rglob("*") if p.is_file())
     return json.dumps(files, ensure_ascii=False) if files else "(workspace is empty)"
 
 

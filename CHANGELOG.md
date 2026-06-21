@@ -96,6 +96,25 @@ Acted on a multi-agent code/security/architecture/product review.
 - **Doc drift** — `docs/security.md` cited the pre-ADR-001 `apps/text2sql/safe_sql.py`
   path; the guard lives in `platform/capabilities/sql_guard.py`. README test count → 300+.
 
+### Hardening round 5 (2026-06-21, security & correctness polish)
+
+Acted on the round-3 multi-agent review's residual findings (Track A).
+
+- **Timing-safe API-key compare** — `hmac.compare_digest` instead of `!=` (no byte-by-byte
+  timing oracle).
+- **RAG input hardening** — `{index}` path segment validated against
+  `^[a-z0-9][a-z0-9_-]{0,63}$` before a Qdrant collection name is built from it; per-document
+  text cap (200k chars) and per-request document cap (500) close an unbounded-ingest DoS.
+- **Upload size limit** — compliance `review/file` rejects >5 MB with 413 *before* buffering/
+  parsing, instead of reading an unbounded body into memory.
+- **HSTS** — `Strict-Transport-Security` added to the always-on security headers.
+- **Readiness-probe topology** — `/healthz/deps` no longer leaks internal host:port detail in
+  `env=prod` (bare state only).
+- **XSS in the console** — LLM-generated Mermaid SVG is sanitised with DOMPurify before
+  `dangerouslySetInnerHTML` (`ui/web/app/process/page.tsx`).
+- **Cleanups** — `assert resp` → explicit raise (survives `python -O`); three duplicate
+  `_add_cost` helpers consolidated onto `workbench_runtime._util.add_cost`.
+
 ## v1.0.0 — Portfolio complete (2026-06-13)
 
 The full roadmap: a service-oriented core plus all 10 demo modules, hardened.

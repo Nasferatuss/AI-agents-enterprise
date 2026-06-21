@@ -21,6 +21,7 @@ import json
 from pydantic import BaseModel, Field
 
 from workbench_app_autonomous.tools import build_tools
+from workbench_runtime._util import add_cost as _add_cost
 from workbench_runtime.agent import Agent, run_agent
 from workbench_runtime.demo import (
     CalculatorInput,
@@ -124,13 +125,7 @@ def _parse_reflection(text: str) -> Reflection:
     # Degrade safely: an unparseable reflection must NOT be read as success
     # (that would let a broken JSON response declare the goal met). Keep going
     # until a real "goal_met": true or the iteration cap stops the loop.
-    return Reflection(
-        goal_met=False, missing="could not parse reflect response", next_focus=""
-    )
-
-
-def _add_cost(total: float | None, part: float | None) -> float | None:
-    return None if (total is None or part is None) else total + part
+    return Reflection(goal_met=False, missing="could not parse reflect response", next_focus="")
 
 
 # --- Acting agent (safe, network-free toolset) ---

@@ -13,15 +13,12 @@ from workbench_evals.types import (
     ExampleReport,
 )
 from workbench_rag.pipeline import RagPipeline
+from workbench_runtime._util import add_cost as _add_cost
 from workbench_runtime.router import ModelRouter
 from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger
 
 log = get_logger(__name__)
-
-
-def _add_cost(total: float | None, part: float | None) -> float | None:
-    return None if (total is None or part is None) else total + part
 
 
 def _mean(values: list[float]) -> float:

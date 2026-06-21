@@ -11,6 +11,7 @@ import json
 
 from pydantic import BaseModel
 
+from workbench_runtime._util import add_cost as _add_cost
 from workbench_runtime.router import ModelRouter
 from workbench_runtime.types import UserMessage
 from workbench_toolgateway import AuditEntry, ToolGateway
@@ -58,10 +59,6 @@ def _parse_subquestions(text: str, fallback: str) -> list[str]:
         except json.JSONDecodeError:
             pass
     return [fallback]
-
-
-def _add_cost(total: float | None, part: float | None) -> float | None:
-    return None if (total is None or part is None) else total + part
 
 
 async def run_research(

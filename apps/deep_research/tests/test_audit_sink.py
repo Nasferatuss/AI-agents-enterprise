@@ -26,9 +26,7 @@ async def test_denied_call_schedules_audit_record(monkeypatch):
         return "trace-id"
 
     # Patch where the sink looks it up (imported into the audit module's namespace).
-    monkeypatch.setattr(
-        "workbench_app_research.audit.record_tool_audit", fake_record_tool_audit
-    )
+    monkeypatch.setattr("workbench_app_research.audit.record_tool_audit", fake_record_tool_audit)
 
     gw = _gateway_with_one_tool()
     # `secret_tool` is registered but NOT on the allowlist → denied by policy,
@@ -59,9 +57,7 @@ async def test_allowed_call_also_audited(monkeypatch):
         recorded.append(entry)
         return None
 
-    monkeypatch.setattr(
-        "workbench_app_research.audit.record_tool_audit", fake_record_tool_audit
-    )
+    monkeypatch.setattr("workbench_app_research.audit.record_tool_audit", fake_record_tool_audit)
 
     gw = _gateway_with_one_tool()
     result = await gw.call("web_search", {"query": "ai"}, allowlist={"web_search"})
@@ -83,9 +79,7 @@ def test_sink_no_running_loop_is_silent(monkeypatch):
         called = True
         return None
 
-    monkeypatch.setattr(
-        "workbench_app_research.audit.record_tool_audit", fake_record_tool_audit
-    )
+    monkeypatch.setattr("workbench_app_research.audit.record_tool_audit", fake_record_tool_audit)
 
     from workbench_app_research.audit import _audit_sink
     from workbench_toolgateway import AuditEntry

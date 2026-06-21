@@ -78,9 +78,9 @@ def test_read_write_reject_symlink_escape(tmp_path, monkeypatch):
     (ws / "escape").symlink_to(outside)
     monkeypatch.setenv("WB_AGENT_WORKSPACE", str(ws))
     assert _read_file(ReadFileInput(filename="escape/secret.txt")).startswith("rejected:")
-    assert _write_file(
-        WriteFileInput(filename="escape/pwn.txt", content="x")
-    ).startswith("rejected:")
+    assert _write_file(WriteFileInput(filename="escape/pwn.txt", content="x")).startswith(
+        "rejected:"
+    )
     assert not (outside / "pwn.txt").exists()  # nothing written outside the sandbox
 
 
@@ -141,9 +141,7 @@ def test_fetch_url_empty(monkeypatch):
 def test_fetch_url_rejects_metadata_ip(monkeypatch):
     # SSRF guard must refuse the cloud metadata endpoint before any fetch happens.
     called = {"fetch": False}
-    monkeypatch.setattr(
-        tools.web, "fetch", lambda args: called.__setitem__("fetch", True) or {}
-    )
+    monkeypatch.setattr(tools.web, "fetch", lambda args: called.__setitem__("fetch", True) or {})
     out = tools._fetch_url(FetchUrlInput(url="http://169.254.169.254/latest/meta-data/"))
     assert out.startswith("rejected:")
     assert called["fetch"] is False
@@ -151,9 +149,7 @@ def test_fetch_url_rejects_metadata_ip(monkeypatch):
 
 def test_fetch_url_rejects_loopback(monkeypatch):
     called = {"fetch": False}
-    monkeypatch.setattr(
-        tools.web, "fetch", lambda args: called.__setitem__("fetch", True) or {}
-    )
+    monkeypatch.setattr(tools.web, "fetch", lambda args: called.__setitem__("fetch", True) or {})
     out = tools._fetch_url(FetchUrlInput(url="http://127.0.0.1/admin"))
     assert out.startswith("rejected:")
     assert called["fetch"] is False

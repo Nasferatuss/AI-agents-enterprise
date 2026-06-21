@@ -71,9 +71,7 @@ async def test_idempotency_key_dedupes_runs(trace_db):
         calls["n"] += 1
         return {"n": calls["n"]}
 
-    registry.register(
-        WorkflowDef(name="idem_wf", description="", steps=[Step(name="s", run=step)])
-    )
+    registry.register(WorkflowDef(name="idem_wf", description="", steps=[Step(name="s", run=step)]))
 
     r1 = await registry.run_workflow("idem_wf", {}, idempotency_key="abc")
     r2 = await registry.run_workflow("idem_wf", {}, idempotency_key="abc")

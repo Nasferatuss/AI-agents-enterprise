@@ -153,7 +153,8 @@ async def step_openai_compatible(
             continue
         break
 
-    assert resp is not None  # loop body always assigns resp or raises
+    if resp is None:  # unreachable in practice, but `assert` is stripped under `python -O`
+        raise ProviderCallError(provider.name, model, "no response produced")
     if resp.status_code != 200:
         raise ProviderCallError(provider.name, model, f"HTTP {resp.status_code}: {resp.text[:200]}")
 

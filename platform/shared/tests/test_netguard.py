@@ -14,18 +14,18 @@ import pytest
 from workbench_shared.netguard import UnsafeUrlError, assert_public_url, safe_get
 
 BLOCKED_URLS = [
-    "http://127.0.0.1/",            # loopback
-    "http://10.0.0.5/",            # RFC1918
-    "http://172.16.0.1/",          # RFC1918
-    "http://192.168.1.1/",         # RFC1918
-    "http://169.254.169.254/",     # link-local cloud metadata
-    "http://100.64.0.1/",          # RFC 6598 CGNAT
-    "http://224.0.0.1/",           # multicast
-    "http://[::1]/",               # IPv6 loopback
-    "http://[fc00::1]/",           # IPv6 ULA
+    "http://127.0.0.1/",  # loopback
+    "http://10.0.0.5/",  # RFC1918
+    "http://172.16.0.1/",  # RFC1918
+    "http://192.168.1.1/",  # RFC1918
+    "http://169.254.169.254/",  # link-local cloud metadata
+    "http://100.64.0.1/",  # RFC 6598 CGNAT
+    "http://224.0.0.1/",  # multicast
+    "http://[::1]/",  # IPv6 loopback
+    "http://[fc00::1]/",  # IPv6 ULA
     "http://[::ffff:169.254.169.254]/",  # IPv6-mapped metadata
-    "http://2852039166/",          # decimal-notation 169.254.169.254
-    "http://0xa9fea9fe/",          # hex-notation 169.254.169.254
+    "http://2852039166/",  # decimal-notation 169.254.169.254
+    "http://0xa9fea9fe/",  # hex-notation 169.254.169.254
     "http://0251.0376.0251.0376/",  # octal-notation 169.254.169.254
 ]
 

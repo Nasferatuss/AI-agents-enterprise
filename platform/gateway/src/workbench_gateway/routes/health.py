@@ -27,7 +27,11 @@ async def _probe_tcp(name: str, host: str, port: int) -> DependencyStatus:
         await writer.wait_closed()
         return DependencyStatus(name=name, state="ok")
     except (OSError, TimeoutError) as exc:
-        return DependencyStatus(name=name, state="unreachable", detail=str(exc) or repr(exc))
+        # The probe error can carry internal host:port; only surface it in dev/test.
+        # In prod the readiness endpoint is often unauthenticated (k8s), so keep it
+        # to a bare state and don't leak topology detail.
+        detail = None if get_settings().env == "prod" else (str(exc) or repr(exc))
+        return DependencyStatus(name=name, state="unreachable", detail=detail)
 
 
 def _endpoints() -> list[tuple[str, str, int]]:

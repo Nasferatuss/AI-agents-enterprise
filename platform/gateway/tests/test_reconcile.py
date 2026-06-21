@@ -31,9 +31,7 @@ async def test_reconcile_reenqueues_only_nonterminal(db):
     register_handler("recontest", handler)
 
     # An orphaned, still-running run — must be picked up.
-    await create_run(
-        run_id="x", kind="recontest", status="running", payload={"goal": "resume me"}
-    )
+    await create_run(run_id="x", kind="recontest", status="running", payload={"goal": "resume me"})
     # A finished run — must NOT be re-enqueued.
     await create_run(run_id="done", kind="recontest", status="pending", payload={})
     await upsert_run(run_id="done", kind="recontest", status="completed", payload={})

@@ -48,3 +48,20 @@ async def test_ingest_then_search_roundtrip(client):
 async def test_search_unknown_index_404(client):
     resp = await client.post("/v1/rag/indexes/ghost/search", json={"query": "x"})
     assert resp.status_code == 404
+
+
+async def test_invalid_index_name_rejected(client):
+    # Probing attempts on the {index} path segment → 422, before any Qdrant
+    # collection name is built from it. (An encoded slash like ..%2F is normalized
+    # away at routing and 404s before the handler — also safe, just a different code.)
+    for bad in ("UPPER", "has space", "dot.ted", "sym!bol", "x" * 100):
+        resp = await client.post(f"/v1/rag/indexes/{bad}/search", json={"query": "x"})
+        assert resp.status_code == 422, bad
+
+
+async def test_ingest_rejects_oversize_document(client):
+    resp = await client.post(
+        "/v1/rag/indexes/kb/documents",
+        json={"documents": [{"source": "big.md", "text": "x" * 200_001}]},
+    )
+    assert resp.status_code == 422  # per-document char cap
