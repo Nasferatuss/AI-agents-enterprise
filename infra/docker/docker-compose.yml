@@ -70,6 +70,9 @@ services:
     volumes:
       # autonomous agent's file workspace → a real folder at the repo root, so the
       # artifacts it writes are visible on the host and survive container rebuilds.
+      # The image runs as non-root (uid 10001); Docker Desktop (macOS/Windows) maps
+      # ownership so writes just work. On native Linux, make the host dir writable by
+      # that uid once: `mkdir -p agent_workspace && chmod 0777 agent_workspace`.
       - ../../agent_workspace:/app/data/agent_workspace
     ports:
       - "${WB_API_HOST_PORT:-8000}:8000"

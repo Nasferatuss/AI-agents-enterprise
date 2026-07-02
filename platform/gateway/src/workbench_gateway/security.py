@@ -3,7 +3,11 @@
 Both default to OFF so the local demo and the test suite stay open. They turn on
 purely from config, with no code change:
 - WB_API_KEY → every /v1/* request must carry a matching X-API-Key header.
-- WB_RATE_LIMIT_PER_MIN → cap POST /v1/* per client IP per minute.
+- WB_RATE_LIMIT_PER_MIN → cap /v1/* per client IP per minute (all methods —
+  a read-heavy GET like `observability/traces?limit=500` is as abusable as a POST).
+
+In ``prod`` both are *required* (see ``validate_production_security``) so a
+deployment can't accidentally expose an unauthenticated, unthrottled LLM proxy.
 
 The rate limiter is a per-process fixed window — fine for a single instance /
 demo; a multi-instance deployment would move the counter to Redis.
@@ -54,6 +58,8 @@ def validate_production_security(settings: Settings) -> None:
     missing: list[str] = []
     if not settings.api_key:
         missing.append("WB_API_KEY (gateway /v1/* auth)")
+    if settings.rate_limit_per_min <= 0:
+        missing.append("WB_RATE_LIMIT_PER_MIN (>0, per-IP /v1/* throttle)")
     if not settings.approval_token:
         missing.append("WB_APPROVAL_TOKEN (workflow approve/reject gate)")
     if not settings.cors_origins or "*" in settings.cors_origins:
@@ -120,7 +126,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         limit = get_settings().rate_limit_per_min
-        if limit and request.method == "POST" and request.url.path.startswith(_PROTECTED):
+        if limit and request.url.path.startswith(_PROTECTED):
             client = self._client_ip(request)
             now = time.monotonic()
             self._reap_idle(now)

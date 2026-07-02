@@ -103,7 +103,16 @@ def test_prod_without_approval_token_refuses_to_start():
 
 def test_prod_with_wildcard_cors_refuses_to_start():
     with pytest.raises(ProductionConfigError, match="WB_CORS_ORIGINS"):
-        validate_production_security(_prod_settings(api_key="k", approval_token="t"))
+        validate_production_security(
+            _prod_settings(api_key="k", approval_token="t", rate_limit_per_min=60)
+        )
+
+
+def test_prod_without_rate_limit_refuses_to_start():
+    with pytest.raises(ProductionConfigError, match="WB_RATE_LIMIT_PER_MIN"):
+        validate_production_security(
+            _prod_settings(api_key="k", approval_token="t", cors_origins=["https://x"])
+        )
 
 
 def test_prod_create_app_raises_when_unconfigured(monkeypatch):
@@ -113,7 +122,9 @@ def test_prod_create_app_raises_when_unconfigured(monkeypatch):
 
 
 def test_prod_fully_configured_boots(monkeypatch):
-    settings = _prod_settings(api_key="k", approval_token="t", cors_origins=["https://app"])
+    settings = _prod_settings(
+        api_key="k", approval_token="t", cors_origins=["https://app"], rate_limit_per_min=60
+    )
     monkeypatch.setattr(gateway_app, "get_settings", lambda: settings)
     assert create_app() is not None  # no exception → boots
 
@@ -148,9 +159,7 @@ async def test_api_key_gate_rejects_wrong_and_accepts_right(monkeypatch):
         transport = httpx.ASGITransport(app=create_app())
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
             assert (await c.get("/v1/agents")).status_code == 401  # no key
-            assert (
-                await c.get("/v1/agents", headers={"X-API-Key": "wrong"})
-            ).status_code == 401
+            assert (await c.get("/v1/agents", headers={"X-API-Key": "wrong"})).status_code == 401
             ok = await c.get("/v1/agents", headers={"X-API-Key": "s3cret"})
             assert ok.status_code == 200
             assert (await c.get("/healthz")).status_code == 200  # non-/v1 stays open

@@ -1,11 +1,12 @@
 """Trace recording and queries."""
 
 import datetime
+import math
 import uuid
 
 from sqlalchemy import case, func, select
 
-from workbench_observability.db import get_sessionmaker
+from workbench_observability.db import get_engine, get_sessionmaker
 from workbench_observability.models import Trace
 from workbench_observability.schema import (
     NON_TERMINAL_STATUSES,
@@ -104,25 +105,38 @@ async def record_tool_audit(entry: dict) -> str | None:
 
 
 async def list_traces(kind: str | None = None, limit: int = 50) -> list[TraceSummary]:
+    """Recent traces for the dashboard. Best-effort like the rest of the store: a
+    query-time DB outage degrades to an empty list, not a 500 on the caller — the
+    observability dashboard reads telemetry and must not itself become an incident."""
     stmt = select(Trace).order_by(Trace.created_at.desc()).limit(limit)
     if kind:
         stmt = stmt.where(Trace.kind == kind)
-    async with get_sessionmaker()() as session:
-        rows = (await session.execute(stmt)).scalars().all()
-        return [TraceSummary.model_validate(r) for r in rows]
+    try:
+        async with get_sessionmaker()() as session:
+            rows = (await session.execute(stmt)).scalars().all()
+            return [TraceSummary.model_validate(r) for r in rows]
+    except Exception as exc:  # noqa: BLE001 — reading telemetry must not break the caller
+        log.warning("trace list failed", kind=kind, error=str(exc))
+        return []
 
 
 async def get_trace(trace_id: str) -> TraceDetail | None:
-    async with get_sessionmaker()() as session:
-        row = await session.get(Trace, trace_id)
-        return TraceDetail.model_validate(row) if row else None
+    try:
+        async with get_sessionmaker()() as session:
+            row = await session.get(Trace, trace_id)
+            return TraceDetail.model_validate(row) if row else None
+    except Exception as exc:  # noqa: BLE001 — reading telemetry must not break the caller
+        log.warning("trace load failed", trace_id=trace_id, error=str(exc))
+        return None
 
 
 def _p95(values: list[int]) -> int:
     if not values:
         return 0
     ordered = sorted(values)
-    idx = min(len(ordered) - 1, int(len(ordered) * 0.95))
+    # Nearest-rank: rank = ceil(0.95 * N) (1-indexed) → index rank-1. `int(N*0.95)`
+    # over-selected (for N=20 it returned index 19, the max, not the p95 at index 18).
+    idx = min(len(ordered) - 1, math.ceil(0.95 * len(ordered)) - 1)
     return ordered[idx]
 
 
@@ -134,10 +148,26 @@ async def aggregates() -> TraceAggregates:
     via `percentile_cont` on Postgres; sqlite has no percentile function, so there we
     fall back to fetching just the latency column and computing it in Python.
     """
-    is_success = Trace.status.in_(SUCCESS_STATUSES)
-    async with get_sessionmaker()() as session:
-        backend = session.bind.dialect.name
+    try:
+        return await _aggregates()
+    except Exception as exc:  # noqa: BLE001 — the dashboard rollup must not 500 the caller
+        log.warning("trace aggregates failed", error=str(exc))
+        return TraceAggregates(
+            total=0,
+            success_rate=0.0,
+            total_cost_usd=0.0,
+            p95_latency_ms=0,
+            by_kind={},
+            failures=[],
+        )
 
+
+async def _aggregates() -> TraceAggregates:
+    is_success = Trace.status.in_(SUCCESS_STATUSES)
+    # Backend from the engine URL (not the deprecated session.bind.dialect): asyncpg
+    # URLs report "postgresql", so the percentile_cont branch below picks correctly.
+    backend = get_engine().url.get_backend_name()
+    async with get_sessionmaker()() as session:
         # Scalar rollups: total, successes, total cost — one round-trip, no row load.
         totals = (
             await session.execute(

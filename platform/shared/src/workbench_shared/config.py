@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     approval_token: str = ""
     # Optional gateway API auth + rate limit (off by default so the local demo is open).
     # WB_API_KEY: when set, /v1/* requires a matching X-API-Key header.
-    # WB_RATE_LIMIT_PER_MIN: when > 0, cap POST /v1/* per client IP per minute.
+    # WB_RATE_LIMIT_PER_MIN: when > 0, cap /v1/* (all methods) per client IP per minute.
+    # Required (>0) in prod — see validate_production_security.
     api_key: str = ""
     rate_limit_per_min: int = 0
     # Behind a reverse proxy the socket peer is the proxy, so the rate limiter would
@@ -42,6 +43,13 @@ class Settings(BaseSettings):
     # tasks in the gateway; "redis" enqueues to Redis for a separate worker process
     # (`python -m workbench_gateway.worker`) — the horizontally-scalable path.
     job_backend: Literal["inprocess", "redis"] = "inprocess"
+    # Max jobs executing concurrently in one process — back-pressure so a burst of
+    # submits can't fan out into unbounded parallel LLM runs (in-process backend) and
+    # one worker doesn't stall the whole queue on a single slow job (redis backend).
+    max_inflight_jobs: int = 8
+    # Grace period to let in-flight in-process jobs reach a terminal state on shutdown
+    # before the reconciler recovers any stragglers on the next start.
+    job_drain_timeout_s: float = 10.0
     # Crash recovery for "running" runs that stop heartbeating: a sweeper marks a run
     # failed if its updated_at is older than the TTL (a hung worker that never crashes
     # nor finishes). The handler heartbeats updated_at while genuinely alive.

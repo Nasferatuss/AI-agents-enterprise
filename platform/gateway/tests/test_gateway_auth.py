@@ -42,9 +42,11 @@ async def test_rate_limit_when_set(monkeypatch):
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         body = {"document": "Stores SSN 123-45-6789."}  # deterministic, no provider
         assert (await c.post("/v1/apps/compliance/review", json=body)).status_code == 200
-        assert (await c.post("/v1/apps/compliance/review", json=body)).status_code == 200
-        # third POST within the window → 429
-        assert (await c.post("/v1/apps/compliance/review", json=body)).status_code == 429
-        # GET is not rate-limited
+        # a GET counts toward the SAME per-IP window (reads are as abusable as writes)
         assert (await c.get("/v1/agents")).status_code == 200
+        # third /v1 request within the window → 429, regardless of method
+        assert (await c.post("/v1/apps/compliance/review", json=body)).status_code == 429
+        assert (await c.get("/v1/agents")).status_code == 429
+        # non-/v1 (health) is never limited
+        assert (await c.get("/healthz")).status_code == 200
     get_settings.cache_clear()

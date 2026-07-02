@@ -70,7 +70,14 @@ class ModelRouter:
         self.registry = registry if registry is not None else build_registry()
         self._http = http or httpx.AsyncClient()
         self._anthropic = anthropic_client  # lazily created: needs ANTHROPIC_API_KEY
-        self._unhealthy_until: dict[str, float] = {}  # provider name → monotonic deadline
+        # provider name → monotonic cooldown deadline. Intentionally lock-free: the
+        # router is shared across concurrent step() coroutines, but every access is a
+        # single atomic dict op (get / __setitem__ / pop) with no await in between, so
+        # under the single-threaded event loop there is no torn read/write to guard.
+        # The cooldown is advisory (best-effort skip of a flapping provider), so a
+        # stale read across an await — try a provider just marked unhealthy, or skip
+        # one that just recovered — is harmless; a Lock would add contention, not safety.
+        self._unhealthy_until: dict[str, float] = {}
 
     def _is_healthy(self, provider_name: str) -> bool:
         deadline = self._unhealthy_until.get(provider_name)

@@ -61,6 +61,17 @@ async def lifespan(app: FastAPI):
             sweeper.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await sweeper
+        # In-process backend: drain jobs still running as asyncio tasks so they reach
+        # a terminal state instead of vanishing on shutdown (stragglers past the grace
+        # period are recovered by the next start's reconciler).
+        if settings.job_backend == "inprocess":
+            from workbench_jobs import get_queue
+            from workbench_jobs.queue import InProcessQueue
+
+            queue = get_queue()
+            if isinstance(queue, InProcessQueue):
+                with contextlib.suppress(Exception):
+                    await queue.aclose(settings.job_drain_timeout_s)
         # Close the shared model-router HTTP client so its connection pool doesn't
         # leak across a reload; drop the cached singleton so a restart rebuilds it.
         from workbench_runtime import get_router

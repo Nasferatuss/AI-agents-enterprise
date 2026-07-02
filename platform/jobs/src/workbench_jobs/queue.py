@@ -77,25 +77,50 @@ async def dispatch(job: Job) -> None:
 
 
 class InProcessQueue:
-    """Runs jobs as asyncio tasks in the current process (default backend)."""
+    """Runs jobs as asyncio tasks in the current process (default backend).
 
-    def __init__(self) -> None:
+    Concurrency is bounded by a semaphore (``WB_MAX_INFLIGHT_JOBS``) so a burst of
+    submits can't fan out into unbounded parallel LLM runs on the event loop — each
+    task waits for a slot before dispatching. ``aclose`` drains in-flight tasks on
+    shutdown so runs reach a terminal state instead of being silently abandoned
+    (any straggler past the grace period is recovered by the startup reconciler).
+    """
+
+    def __init__(self, max_inflight: int = 8) -> None:
         # Hold strong refs so tasks aren't garbage-collected mid-run.
         self._tasks: set[asyncio.Task] = set()
+        self._sem = asyncio.Semaphore(max_inflight)
+
+    async def _run(self, job: Job) -> None:
+        async with self._sem:  # back-pressure: at most max_inflight dispatch concurrently
+            await dispatch(job)
 
     async def enqueue(self, job: Job) -> None:
-        task = asyncio.create_task(dispatch(job))
+        task = asyncio.create_task(self._run(job))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+
+    async def aclose(self, drain_timeout: float = 10.0) -> None:
+        """Wait up to ``drain_timeout`` for in-flight jobs to finish (graceful
+        shutdown). Stragglers are left for the reconciler to recover on restart."""
+        if not self._tasks:
+            return
+        pending = list(self._tasks)
+        done, still = await asyncio.wait(pending, timeout=drain_timeout)
+        if still:
+            log.warning("job drain timed out; stragglers left for reconcile", pending=len(still))
 
 
 class RedisQueue:
     """Pushes jobs to a Redis list; a separate worker process consumes them."""
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, max_inflight: int = 8) -> None:
         import redis.asyncio as redis  # lazy: only the redis path needs the client
 
         self._redis = redis.from_url(url)
+        # Bound how many jobs one worker runs at once — a single slow job no longer
+        # blocks the whole queue, but a worker still can't fan out without limit.
+        self._max_inflight = max_inflight
 
     async def enqueue(self, job: Job) -> None:
         await self._redis.lpush(_REDIS_LIST_KEY, job.model_dump_json())
@@ -139,29 +164,49 @@ class RedisQueue:
         """How many jobs are parked in the dead-letter queue (for ops/monitoring)."""
         return int(await self._redis.llen(_REDIS_DLQ_KEY))
 
+    async def _process(self, raw, sem: asyncio.Semaphore) -> None:
+        """Dispatch one popped job and ack it (LREM from processing). Releases the
+        concurrency slot when done. Runs as its own task so a slow job doesn't block
+        the pop loop from filling the other slots."""
+        try:
+            try:
+                job = Job.model_validate_json(raw)
+            except Exception as exc:  # noqa: BLE001 — skip a malformed payload, keep serving
+                log.warning("dropping malformed job", error=str(exc))
+                await self._redis.lrem(_REDIS_PROCESSING_KEY, 1, raw)
+                return
+            # dispatch never raises and persists terminal state itself, so once it
+            # returns the job is genuinely done and safe to ack.
+            await dispatch(job)
+            await self._redis.lrem(_REDIS_PROCESSING_KEY, 1, raw)
+        finally:
+            sem.release()
+
     async def consume_forever(self) -> None:
         """Worker loop (at-least-once): atomically move a job to the processing list,
         dispatch it, then ack by removing it from processing. A crash before the ack
-        leaves the job in processing for the next worker's reclaim()."""
+        leaves the job in processing for the next worker's reclaim().
+
+        Up to ``max_inflight`` jobs run concurrently: a slot is acquired *before* the
+        blocking pop, so the loop never holds more than the bound in flight and a
+        single slow job no longer stalls the queue. A concurrent redelivery is still
+        safe — the run-level ``claim_run`` lets only one worker execute a given run."""
         log.info("job worker started", backend="redis", key=_REDIS_LIST_KEY)
+        sem = asyncio.Semaphore(self._max_inflight)
+        tasks: set[asyncio.Task] = set()
         while True:
+            await sem.acquire()
             # BLMOVE is atomic: the job is never in neither list. src=RIGHT keeps FIFO
             # (enqueue LPUSHes to the head).
             raw = await self._redis.blmove(
                 _REDIS_LIST_KEY, _REDIS_PROCESSING_KEY, 5, "RIGHT", "LEFT"
             )
             if raw is None:
-                continue  # idle timeout — loop so cancellation can be observed
-            try:
-                job = Job.model_validate_json(raw)
-            except Exception as exc:  # noqa: BLE001 — skip a malformed payload, keep serving
-                log.warning("dropping malformed job", error=str(exc))
-                await self._redis.lrem(_REDIS_PROCESSING_KEY, 1, raw)
+                sem.release()  # idle timeout — free the slot, loop so cancellation is seen
                 continue
-            # dispatch never raises and persists terminal state itself, so once it
-            # returns the job is genuinely done and safe to ack.
-            await dispatch(job)
-            await self._redis.lrem(_REDIS_PROCESSING_KEY, 1, raw)
+            task = asyncio.create_task(self._process(raw, sem))
+            tasks.add(task)
+            task.add_done_callback(tasks.discard)
 
 
 @lru_cache
@@ -170,10 +215,10 @@ def get_queue():
     settings = get_settings()
     if settings.job_backend == "redis":
         try:
-            return RedisQueue(settings.redis_url)
+            return RedisQueue(settings.redis_url, max_inflight=settings.max_inflight_jobs)
         except Exception as exc:  # noqa: BLE001 — never drop jobs on a bad Redis config
             log.warning("redis queue unavailable, using in-process", error=str(exc))
-    return InProcessQueue()
+    return InProcessQueue(max_inflight=settings.max_inflight_jobs)
 
 
 def reset_queue() -> None:

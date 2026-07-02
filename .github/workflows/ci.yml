@@ -24,6 +24,41 @@ jobs:
       - name: Tests (incl. eval regression + SQL injection suite)
         run: uv run pytest -q
 
+  migrations:
+    name: alembic migrations (real Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: workbench
+          POSTGRES_PASSWORD: workbench
+          POSTGRES_DB: workbench
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U workbench"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Async SQLAlchemy URL alembic/env.py reads (WB_TRACE_DB_URL). The create_all
+      # path (sqlite) never exercises the 0001→0002→0003 chain — this job does, on a
+      # real Postgres, so a broken migration (e.g. the 0003 UNIQUE) fails CI.
+      WB_TRACE_DB_URL: postgresql+asyncpg://workbench:workbench@localhost:5432/workbench
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Sync workspace
+        run: uv sync --frozen
+      - name: Upgrade to head (runs every migration)
+        run: uv run alembic -c platform/observability/alembic.ini upgrade head
+      - name: Full downgrade then re-upgrade (migrations are reversible)
+        run: |
+          uv run alembic -c platform/observability/alembic.ini downgrade base
+          uv run alembic -c platform/observability/alembic.ini upgrade head
+
   playwright:
     name: computer-use e2e (real browser)
     runs-on: ubuntu-latest

@@ -11,9 +11,16 @@ RUN uv sync --frozen --no-dev
 
 # Bundle headless Chromium + its system libraries so the computer-use /browse
 # endpoint works inside the container (playwright is a runtime dep of the cua app).
-# Adds ~400MB; the rest of the demo runs fine without it.
+# Adds ~400MB; the rest of the demo runs fine without it. --with-deps installs apt
+# packages, so it must run as root — before we drop privileges below.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN uv run --no-sync playwright install --with-deps chromium
+
+# Drop root: run as an unprivileged user so a process compromise doesn't own the
+# container. Own /app and the browser cache so the app can still read them.
+RUN useradd --create-home --uid 10001 app \
+    && chown -R app:app /app /ms-playwright
+USER app
 
 EXPOSE 8000
 CMD ["uv", "run", "--no-sync", "uvicorn", "workbench_gateway.app:app", "--host", "0.0.0.0", "--port", "8000"]

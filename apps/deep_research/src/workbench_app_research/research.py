@@ -102,9 +102,7 @@ async def run_research(
                 bodies[url] = fetched.output.get("text", "")
 
     # 3. report (with verification baked into the prompt)
-    numbered = "\n\n".join(
-        f"[{s.n}] {s.title} ({s.url})\n{bodies.get(s.url, '')}" for s in sources
-    )
+    numbered = "\n\n".join(f"[{s.n}] {s.title} ({s.url})\n{bodies.get(s.url, '')}" for s in sources)
     report_out = await router.step(
         [UserMessage(content=f"Question: {question}\n\nSources:\n{numbered}")],
         complexity="complex",
