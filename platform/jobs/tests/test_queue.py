@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 
 import pytest
+
 from workbench_jobs import Job, get_queue, register_handler, reset_queue
 from workbench_jobs import queue as q
 

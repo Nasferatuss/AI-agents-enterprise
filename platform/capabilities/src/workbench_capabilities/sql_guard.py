@@ -18,6 +18,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlglot import exp
 
 MAX_ROWS = 200
+# A capped LIMIT still lets `LIMIT 200 OFFSET 99999999` force the engine to scan and
+# skip ~100M rows before returning — a cheap scan-amplification DoS. Reject any OFFSET
+# past this (an analytics read tool has no legitimate need for a huge skip).
+MAX_OFFSET = 100_000
 
 _FORBIDDEN_NODES = (
     exp.Insert,
@@ -85,6 +89,14 @@ def validate_sql(sql: str, allowed_tables: set[str], dialect: str = "sqlite") ->
         name = table.name.lower()
         if name and name not in allowed and name not in cte_names:
             raise SqlGuardError(f"table '{table.name}' is not in the allowlist: {sorted(allowed)}")
+
+    # Reject a scan-amplifying OFFSET before it reaches the engine. (A non-literal
+    # OFFSET — e.g. an expression — is likewise refused, since we can't bound it.)
+    offset_node = tree.args.get("offset")
+    if offset_node is not None:
+        expr = offset_node.expression
+        if not isinstance(expr, exp.Literal) or int(expr.this) > MAX_OFFSET:
+            raise SqlGuardError(f"OFFSET too large (max {MAX_OFFSET})")
 
     limit_node = tree.args.get("limit")
     if (

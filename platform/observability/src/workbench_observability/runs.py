@@ -28,7 +28,9 @@ from workbench_shared.logging import get_logger
 log = get_logger(__name__)
 
 # In-flight statuses: a run that hasn't reached a terminal state yet. Used by the
-# worker's startup reconciler to pick up runs orphaned by a crash.
+# worker's startup reconciler to pick up runs orphaned by a crash. NOTE: distinct
+# from schema.NON_TERMINAL_STATUSES (trace recording) — this one is the run-store
+# reconcile set and includes "pending", which that one deliberately omits.
 NON_TERMINAL_RUN_STATUSES = ("pending", "running")
 
 

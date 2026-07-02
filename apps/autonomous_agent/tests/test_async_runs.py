@@ -7,9 +7,9 @@ LLM loop), against a fresh in-memory durable store.
 import asyncio
 
 import pytest
+
 from workbench_app_autonomous import api
 from workbench_app_autonomous.agent import AutonomousResult
-
 from workbench_observability import init_db, reset_engine
 
 
@@ -65,8 +65,11 @@ async def test_submit_returns_202_and_completes_in_background(run_store, monkeyp
 
 
 async def test_unknown_run_404(run_store):
-    with pytest.raises(Exception):  # noqa: B017 — HTTPException(404) surfaces here
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc_info:
         await api.get_run_status("does-not-exist")
+    assert exc_info.value.status_code == 404  # not just "some error" — the right one
 
 
 async def test_idempotent_submit_dedupes(run_store, monkeypatch):

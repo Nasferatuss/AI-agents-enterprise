@@ -24,6 +24,21 @@ jobs:
       - name: Tests (incl. eval regression + SQL injection suite)
         run: uv run pytest -q
 
+  secrets-scan:
+    name: secret scan (trufflehog)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # scan full history, not just the tip
+      - name: TruffleHog filesystem scan (verified secrets only)
+        # --only-verified live-checks candidates against provider APIs, so committed
+        # test fixtures (e.g. "s3cret") don't trip it — only a real, active leak fails CI.
+        # A safety net now that the repo is public; keys have never been in git history.
+        run: |
+          docker run --rm -v "$PWD:/repo" trufflesecurity/trufflehog:latest \
+            filesystem /repo --only-verified --fail
+
   migrations:
     name: alembic migrations (real Postgres)
     runs-on: ubuntu-latest

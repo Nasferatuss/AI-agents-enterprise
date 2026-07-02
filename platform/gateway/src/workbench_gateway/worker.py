@@ -13,11 +13,10 @@ does work when ``WB_JOB_BACKEND=redis``.
 import asyncio
 import contextlib
 
-from workbench_jobs import get_queue
-from workbench_jobs.queue import RedisQueue
-
 import workbench_gateway.app  # noqa: F401 — import side effect: registers app handlers
 from workbench_gateway.reconcile import reconcile_runs, run_sweeper
+from workbench_jobs import get_queue
+from workbench_jobs.queue import RedisQueue
 from workbench_observability import init_db
 from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger

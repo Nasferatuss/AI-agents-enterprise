@@ -126,7 +126,7 @@ async def test_unhealthy_provider_skipped_until_cooldown(monkeypatch):
     assert calls["b"] == 2
 
 
-async def test_cooldown_clears_after_expiry(monkeypatch):
+async def test_zero_cooldown_never_skips(monkeypatch):
     import workbench_runtime.router as router_mod
 
     monkeypatch.setattr(router_mod, "_HEALTH_COOLDOWN_S", 0.0)  # never cools down → never skipped
@@ -148,6 +148,45 @@ async def test_cooldown_clears_after_expiry(monkeypatch):
             await router.complete([ChatMessage(role="user", content="x")])
     # With cooldown disabled, "a" is retried every request rather than skipped.
     assert calls["a"] == 3
+
+
+async def test_cooldown_expires_and_provider_retried(monkeypatch):
+    # True time-based expiry: a provider marked unhealthy is skipped WHILE in cooldown
+    # and retried once the deadline passes. Drive time via a fake monotonic clock so
+    # the test is deterministic (no sleeps).
+    import workbench_runtime.router as router_mod
+
+    monkeypatch.setattr(router_mod, "_HEALTH_COOLDOWN_S", 30.0)
+    clock = {"t": 1000.0}
+    monkeypatch.setattr(router_mod.time, "monotonic", lambda: clock["t"])
+
+    calls = {"a": 0, "b": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls[request.url.host] += 1
+        if request.url.host == "a":
+            return httpx.Response(500, text="boom")
+        return httpx.Response(200, json=_completion_payload("ok"))
+
+    registry = {"a": _fake_provider("a", "a"), "b": _fake_provider("b", "b")}
+    router = ModelRouter(
+        registry=registry, http=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    router.chain = lambda complexity: [("a", "default"), ("b", "default")]  # type: ignore[method-assign]
+
+    # t=1000: "a" fails → unhealthy until 1030; "b" serves.
+    await router.complete([ChatMessage(role="user", content="1")])
+    assert calls == {"a": 1, "b": 1}
+
+    # t=1010: still within cooldown → "a" skipped entirely.
+    clock["t"] = 1010.0
+    await router.complete([ChatMessage(role="user", content="2")])
+    assert calls == {"a": 1, "b": 2}
+
+    # t=1041: cooldown expired → "a" is tried again (fails), then falls back to "b".
+    clock["t"] = 1041.0
+    await router.complete([ChatMessage(role="user", content="3")])
+    assert calls == {"a": 2, "b": 3}
 
 
 async def test_local_provider_uses_short_connect_timeout():

@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from workbench_app_autonomous import tools
 from workbench_app_autonomous.tools import (
     FetchUrlInput,

@@ -9,6 +9,7 @@ from workbench_runtime.types import AgentRun, RunContext, Usage
 @pytest.fixture
 async def client(tmp_path, monkeypatch):
     from sqlalchemy import create_engine
+
     from workbench_capabilities import create_sample_db
 
     db = create_sample_db(tmp_path / "retail.db")

@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from workbench_app_autonomous.api import router as autonomous_router
 
+from workbench_app_autonomous.api import router as autonomous_router
 from workbench_app_compliance.api import router as compliance_router
 from workbench_app_cua.api import router as cua_router
 from workbench_app_incident.api import router as incident_router
@@ -44,9 +44,8 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     if settings.job_backend == "inprocess":
         try:
-            from workbench_jobs import get_queue
-
             from workbench_gateway.reconcile import reconcile_runs, run_sweeper
+            from workbench_jobs import get_queue
 
             await reconcile_runs(get_queue())
             sweeper = asyncio.create_task(

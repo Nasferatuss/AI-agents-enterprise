@@ -20,9 +20,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
-from workbench_jobs import Job, get_queue, register_handler
 
 from workbench_app_autonomous.agent import AutonomousResult, run_autonomous
+from workbench_jobs import Job, get_queue, register_handler
 from workbench_observability import (
     claim_run,
     create_run,

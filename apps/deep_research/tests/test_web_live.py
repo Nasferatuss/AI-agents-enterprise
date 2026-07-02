@@ -8,10 +8,10 @@ stub from test_research.py.
 import json
 
 import httpx
-from workbench_capabilities import web
-from workbench_capabilities.web import build_live_gateway
 
 from workbench_app_research.research import run_research
+from workbench_capabilities import web
+from workbench_capabilities.web import build_live_gateway
 from workbench_runtime.providers import Provider
 from workbench_runtime.router import ModelRouter
 

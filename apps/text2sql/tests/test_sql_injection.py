@@ -5,6 +5,7 @@ the run_sql tool. The guard (ADR-004) must reject every one before execution.
 """
 
 import pytest
+
 from workbench_capabilities import SqlGuardError, validate_sql
 
 ALLOWED = {"customers", "products", "orders", "order_items"}

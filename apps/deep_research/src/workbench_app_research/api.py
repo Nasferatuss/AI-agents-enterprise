@@ -5,10 +5,10 @@ import time
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from workbench_capabilities.web import build_live_gateway
 
 from workbench_app_research.audit import attach_audit_sink
 from workbench_app_research.research import ResearchReport, run_research
+from workbench_capabilities.web import build_live_gateway
 from workbench_observability import safe_record
 from workbench_runtime import get_router
 from workbench_runtime.router import NoProviderAvailableError

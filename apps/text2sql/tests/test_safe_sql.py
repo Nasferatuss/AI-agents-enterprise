@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy import create_engine
+
 from workbench_capabilities import (
     MAX_ROWS,
     SqlGuardError,
@@ -28,6 +29,17 @@ def test_oversized_limit_is_capped():
     sql = validate_sql("SELECT name FROM customers LIMIT 100000", ALLOWED)
     assert f"LIMIT {MAX_ROWS}" in sql
     assert "100000" not in sql
+
+
+def test_small_offset_is_kept():
+    sql = validate_sql("SELECT name FROM customers LIMIT 5 OFFSET 100", ALLOWED)
+    assert "OFFSET 100" in sql
+
+
+def test_scan_amplifying_offset_is_rejected():
+    # LIMIT is capped but a huge OFFSET still forces the engine to skip ~100M rows.
+    with pytest.raises(SqlGuardError, match="OFFSET too large"):
+        validate_sql("SELECT name FROM customers LIMIT 200 OFFSET 99999999", ALLOWED)
 
 
 def test_cte_and_join_allowed():

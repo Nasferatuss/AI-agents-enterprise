@@ -320,9 +320,7 @@ def expand_cases(cases: list[BenchCase], target: int) -> list[BenchCase]:
     return out
 
 
-async def _run_phase(
-    router: ModelRouter, cases: list[BenchCase], concurrency: int
-) -> LoadPhase:
+async def _run_phase(router: ModelRouter, cases: list[BenchCase], concurrency: int) -> LoadPhase:
     """Drive ``cases`` through the router with at most ``concurrency`` in-flight
     completions (asyncio.gather bounded by a semaphore). Measures wall-clock and
     per-request latency under that contention."""
@@ -369,11 +367,7 @@ async def run_load_benchmark(
     serial baseline does not flatter the parallel numbers."""
     concurrency = max(1, concurrency)
     serial = await _run_phase(router, cases, 1)
-    concurrent = (
-        serial
-        if concurrency == 1
-        else await _run_phase(router, cases, concurrency)
-    )
+    concurrent = serial if concurrency == 1 else await _run_phase(router, cases, concurrency)
 
     report = LoadReport(
         mode="",  # set by caller
@@ -615,9 +609,7 @@ def render_load_markdown(report: LoadReport) -> str:
     lines.append(
         f"| parallel efficiency (speedup / concurrency) | {report.parallel_efficiency:.0%} |"
     )
-    lines.append(
-        f"| p95 latency under load vs serial | {report.p95_degradation:.2f}× |"
-    )
+    lines.append(f"| p95 latency under load vs serial | {report.p95_degradation:.2f}× |")
     lines.append(
         f"| throughput gain | "
         f"{report.serial.throughput_rps:.2f} → {report.concurrent.throughput_rps:.2f} req/s |"

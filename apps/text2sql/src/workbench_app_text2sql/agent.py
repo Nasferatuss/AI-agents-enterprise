@@ -4,6 +4,7 @@ import json
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
+
 from workbench_capabilities import (
     MAX_ROWS,
     SqlGuardError,
@@ -11,7 +12,6 @@ from workbench_capabilities import (
     reflect_tables,
     schema_description,
 )
-
 from workbench_runtime.agent import Agent
 from workbench_runtime.tools import Tool
 

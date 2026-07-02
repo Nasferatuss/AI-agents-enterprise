@@ -14,7 +14,6 @@ backend) and the Redis worker.
 import asyncio
 
 from workbench_jobs import Job, registered_kinds
-
 from workbench_observability import list_nonterminal_runs, sweep_stuck_runs
 from workbench_shared.config import get_settings
 from workbench_shared.logging import get_logger

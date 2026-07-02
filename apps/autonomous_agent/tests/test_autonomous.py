@@ -2,8 +2,8 @@ import json
 
 import httpx
 import pytest
-from workbench_app_autonomous.agent import _parse_reflection, run_autonomous
 
+from workbench_app_autonomous.agent import _parse_reflection, run_autonomous
 from workbench_runtime.providers import Provider
 from workbench_runtime.router import ModelRouter
 

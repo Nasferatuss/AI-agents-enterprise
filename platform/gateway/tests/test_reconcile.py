@@ -3,9 +3,9 @@
 import asyncio
 
 import pytest
-from workbench_jobs import InProcessQueue, register_handler
 
 from workbench_gateway.reconcile import reconcile_runs
+from workbench_jobs import InProcessQueue, register_handler
 from workbench_observability import create_run, init_db, reset_engine, upsert_run
 
 

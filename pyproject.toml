@@ -56,7 +56,9 @@ workbench-app-autonomous = { workspace = true }
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/rag/src", "platform/evals/src", "platform/orchestrator/src", "platform/observability/src", "apps/text2sql/src", "apps/process_investigator/src", "apps/compliance_reviewer/src", "platform/toolgateway/src", "apps/deep_research/src", "apps/computer_use_qa/src", "apps/incident_response/src"]
+# Keep in sync with [tool.uv.workspace] members — every member's /src is first-party
+# so ruff's import sorter (I) classifies cross-package imports correctly.
+src = ["platform/shared/src", "platform/gateway/src", "platform/runtime/src", "platform/jobs/src", "platform/capabilities/src", "platform/rag/src", "platform/evals/src", "platform/orchestrator/src", "platform/observability/src", "platform/toolgateway/src", "apps/text2sql/src", "apps/process_investigator/src", "apps/compliance_reviewer/src", "apps/deep_research/src", "apps/computer_use_qa/src", "apps/incident_response/src", "apps/autonomous_agent/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]

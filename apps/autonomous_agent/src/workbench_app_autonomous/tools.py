@@ -24,6 +24,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
+
 from workbench_capabilities import (
     MAX_ROWS,
     SqlGuardError,
@@ -33,7 +34,6 @@ from workbench_capabilities import (
     schema_description,
     web,
 )
-
 from workbench_runtime.tools import Tool
 from workbench_shared.netguard import UnsafeUrlError, assert_public_url
 

@@ -5,6 +5,9 @@ from pydantic import BaseModel, ConfigDict
 # Statuses considered a successful terminal run, across all run kinds.
 SUCCESS_STATUSES = {"completed"}
 # In-flight statuses are not recorded as traces (recorded on the terminal resume).
+# NOTE: distinct from runs.NON_TERMINAL_RUN_STATUSES ({"pending","running"}), which
+# drives durable-run reconcile. This set is about TRACE recording (a completed audit
+# record) and so includes "awaiting_approval" but not "pending" — different concern.
 NON_TERMINAL_STATUSES = {"running", "awaiting_approval"}
 
 
