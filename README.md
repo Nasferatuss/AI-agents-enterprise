@@ -7,13 +7,30 @@ A **production-style reference platform** for building, evaluating, and operatin
 one service-oriented core, with demo apps and flagship agents on top. Every module walks the
 full engineering loop: **context → tools → reasoning → action → eval → trace → governance → demo.**
 
-> Status: **Core + flagships, hardened.** A service-oriented platform core, 10 demo apps (4 deep,
-> 3 flagship, 3 illustrative — see [grouping](#modules)), real web/browser/autonomous flagships,
+> Status: **Core + flagships, hardened.** A service-oriented platform core, 11 demo modules
+> (4 deep, 5 illustrative, 3 externally-connected flagships — one shared with the Computer-Use QA
+> module; see [grouping](#modules)), real web/browser/autonomous flagships,
 > a published [routing benchmark](docs/benchmarks.md), and a [security model](docs/security.md)
 > with SSRF/sandbox/auth hardening. 300+ network-free tests, CI, Docker Compose.
 >
 > *Reference platform, not a multi-tenant SaaS: the engineering practices are production-grade;
 > sample data and a few external actions are scoped demo seams, called out in [What's real vs demo](#whats-real-vs-demo).*
+
+## Demo
+
+A guided 5-minute tour lives in **[docs/demo.md](docs/demo.md)** — it leads with the
+externally-connected flagships (autonomous agent, live browser, real-web research)
+and then shows the engineering rigor underneath (guarded SQL, approval-gated
+workflows, per-run observability). Run it locally with `make up && make ui`.
+
+<!-- Screenshots: capture the set described in docs/screenshots/README.md, then
+     uncomment the blocks below (they render once the files exist).
+![Autonomous Agent — plan/act/reflect loop](docs/screenshots/autonomous.gif)
+![Live Computer-Use — driving a real site](docs/screenshots/browse.gif)
+![Deep Research — cited report over the real web](docs/screenshots/research.png)
+![Text-to-SQL — SQL + result + reasoning trace](docs/screenshots/text2sql.png)
+![Observability — cost/latency/failure taxonomy](docs/screenshots/observability.png)
+-->
 
 ## What's built
 
@@ -116,8 +133,8 @@ flowchart TD
 
 ```
 platform/   platform layers: shared, gateway, runtime, rag, evals, orchestrator, observability
-apps/       demo modules built on top of the core (text2sql)
-ui/web      Next.js demo console (3 module pages)
+apps/       demo modules built on the core (text2sql, process, compliance, research, cua, incident, autonomous)
+ui/web      Next.js demo console (one page per module)
 infra/      Docker Compose
 docs/       setup, demo walkthrough, security model
 wiki/       knowledge base: architecture, ADRs, roadmap, risks (Obsidian-style, Russian)

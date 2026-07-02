@@ -1,4 +1,15 @@
-"""FastAPI application factory for the API Gateway."""
+"""FastAPI application factory for the API Gateway.
+
+Composition root (deliberate, and the one place the rule is inverted): the platform
+layering is apps→platform with *zero* app→app edges, and platform packages never
+import apps. This module is the exception by design — it is the *assembly* layer,
+not a platform capability, so it imports every app router and mounts it. Think of it
+as `main()`: wiring concrete implementations together belongs at the top, not inside
+the libraries. The Redis `worker` entrypoint imports this module for the same reason
+(a side-effect import that registers every app's job handler in the worker process).
+No platform *capability* (runtime, rag, observability, …) imports an app; only this
+composition root and the worker do. See ADR-001 for the layering rule.
+"""
 
 import asyncio
 import contextlib

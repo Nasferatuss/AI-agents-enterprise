@@ -45,8 +45,8 @@ export default async function Home() {
         Enterprise AI Agent Workbench
       </h1>
       <p className="mt-2 text-sm text-zinc-400">
-        Service-oriented platform for production-grade AI agents — demo console
-        (Sprint 0 skeleton).
+        Service-oriented platform for production-grade AI agents — live demo
+        console over the API gateway.
       </p>
 
       <section className="mt-10 rounded-lg border border-zinc-800 p-5">
