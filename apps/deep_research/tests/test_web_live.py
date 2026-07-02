@@ -86,33 +86,33 @@ def _patch_live(monkeypatch):
     web.BODY_CACHE.clear()
 
 
-def test_live_web_search_and_fetch_shapes(monkeypatch):
+async def test_live_web_search_and_fetch_shapes(monkeypatch):
     _patch_live(monkeypatch)
-    hits = web.web_search({"query": "retrieval augmented generation"})
+    hits = await web.web_search({"query": "retrieval augmented generation"})
     assert hits and set(hits[0]) == {"title", "url", "snippet"}
     assert hits[0]["url"].startswith("https://example.")
 
-    fetched = web.fetch({"url": hits[0]["url"]})
+    fetched = await web.fetch({"url": hits[0]["url"]})
     assert set(fetched) == {"url", "title", "text"}
     assert "vector store" in fetched["text"] or "tools" in fetched["text"]
     # body cached for the report stage
     assert web.BODY_CACHE[hits[0]["url"]]["text"]
 
 
-def test_live_fetch_bad_url_returns_empty(monkeypatch):
+async def test_live_fetch_bad_url_returns_empty(monkeypatch):
     def _boom(url, **kwargs):
         raise httpx.ConnectError("no network", request=httpx.Request("GET", url))
 
     monkeypatch.setattr(web, "safe_get", _boom)
-    out = web.fetch({"url": "https://93.184.216.34/x"})
+    out = await web.fetch({"url": "https://93.184.216.34/x"})
     assert out == {"url": "https://93.184.216.34/x", "title": "", "text": ""}
 
 
-def test_live_fetch_rejects_metadata_and_localhost():
+async def test_live_fetch_rejects_metadata_and_localhost():
     # Real safe_get guards SSRF: metadata IP (literal, no DNS) and loopback host.
     web.BODY_CACHE.clear()
     for bad in ("http://169.254.169.254/latest/meta-data/", "http://localhost:8000/admin"):
-        out = web.fetch({"url": bad})
+        out = await web.fetch({"url": bad})
         assert out == {"url": bad, "title": "", "text": ""}
         assert bad not in web.BODY_CACHE
 

@@ -10,14 +10,16 @@ Two backends, one config switch (`WB_JOB_BACKEND`):
 
 > **Topology boundary (be explicit):** the in-process backend is correct only on
 > a *single* gateway replica. Its startup reconciler and sweeper run per-process,
-> so N replicas would each re-enqueue the same orphaned runs → up to N concurrent
-> re-executions (effectively-once only protects runs already terminal). Horizontal
-> scaling is the Redis backend with dedicated workers — there the worker owns
+> so N replicas would each re-enqueue the same orphaned runs. Those redeliveries no
+> longer risk N *concurrent* re-executions — the run-level atomic claim (below)
+> lets exactly one worker execute a given run at a time — but running N gateways
+> that each sweep/reconcile is still wasteful choreography. Horizontal scaling is
+> the Redis backend with dedicated workers — there the worker owns
 > reclaim/reconcile/sweep, and the gateway replicas only submit. See ADR-010.
 
 ## The guarantee
 
-**At-least-once delivery + effectively-once execution.**
+**At-least-once delivery + single-active-execution (atomic lease claim).**
 
 - `enqueue` → `LPUSH workbench:jobs`.
 - `consume_forever` → `BLMOVE workbench:jobs → workbench:jobs:processing` (atomic;
@@ -25,15 +27,22 @@ Two backends, one config switch (`WB_JOB_BACKEND`):
   (the ack). A crash between `BLMOVE` and `LREM` leaves the job in *processing*.
 - `reclaim()` on worker startup moves anything stranded in *processing* back onto
   the main queue → orphaned jobs are retried, not lost.
-- The handler is **idempotent**: it skips a run that is already in a terminal
-  state (`apps/autonomous_agent/.../api.py` → `_execute_run` returns early when
-  `get_run` is terminal). So a redelivered, already-finished job does no costly
-  work twice.
+- The handler **atomically claims** the run before doing any work
+  (`apps/autonomous_agent/.../api.py` → `_execute_run` → `claim_run`). `claim_run`
+  is a single compare-and-set `UPDATE agent_runs SET status='running' WHERE id=:id
+  AND (status='pending' OR (status='running' AND updated_at < now-lease))`. The DB
+  serializes the row update, so if the *same* run is delivered to two workers at
+  once **exactly one gets `rowcount==1`** and proceeds; the loser sees a fresh
+  `running` row and returns. A run whose owner crashed becomes claimable again once
+  its **lease** (`WB_RUN_STUCK_TTL_S`) expires, so orphaned work is re-driven.
 
-Net: a job is delivered *at least* once, but the expensive LLM run happens
-*effectively* once. This is **not** true exactly-once (a job that crashes
-*mid-flight*, before persisting terminal state, is correctly re-run) — see the
-boundary section of ADR-010 for why that line is drawn here.
+Net: a job is delivered *at least* once, but the expensive LLM run is only ever
+executed by **one worker at a time** — the old read-then-check had a TOCTOU window
+where two concurrent deliveries could both start; the atomic claim closes it. This
+is still **not** true exactly-once (a run that crashes *mid-flight*, before
+persisting terminal state, is re-driven from the start once its lease lapses — no
+partial-result checkpointing) — see the boundary section of ADR-010 for why that
+line is drawn here.
 
 ## Proven in CI (deterministic, network-free)
 
@@ -44,7 +53,7 @@ orphan and re-delivers it. The assertions pin the guarantee:
 
 ```
 deliveries    == ["run-1", "run-1"]   # at-least-once: handler invoked twice
-expensive_runs == ["run-1"]           # effectively-once: executed once
+expensive_runs == ["run-1"]           # single-active-execution: executed once
 processing list empty                 # finally acked
 ```
 
@@ -82,7 +91,8 @@ What you should observe: the run does **not** get stuck or silently dropped when
 its worker dies; the other worker picks it up via `reclaim()` and drives it to a
 terminal state, and the costly work is not duplicated. If the killed worker had
 already finished (terminal state persisted) before dying, the redelivery is a
-no-op by the effectively-once guard.
+no-op — a terminal run is not claimable. And if two workers ever race on the same
+live run, the atomic `claim_run` lets only one execute it.
 
 ## Crash-recovery layers (where each failure is caught)
 
@@ -91,18 +101,23 @@ no-op by the effectively-once guard.
 | Worker dies **between pop and ack** | `reclaim()` on the next worker start moves it from *processing* back to the queue |
 | Gateway/worker restarts with `pending`/`running` runs in the store | `reconcile_runs` re-enqueues those that have a registered handler (paused HITL is left alone) |
 | Worker **hangs** (alive, not crashed, stops progressing) | heartbeat (`touch_run` bumps `updated_at`) + `run_sweeper` fails runs idle past `WB_RUN_STUCK_TTL_S` |
-| Redelivery of an **already-finished** run | effectively-once: handler skips a terminal run |
+| Redelivery of an **already-finished** run | `claim_run` compare-and-set rejects a terminal row — no re-execution |
+| **Concurrent** redelivery of a *live* run to two workers | `claim_run` atomic `UPDATE … WHERE` — exactly one gets `rowcount==1`; the other backs off (lease not expired) |
 | Concurrent duplicate submit (same idempotency key) | `UNIQUE(kind, idempotency_key)` + `create_run` catching `IntegrityError` returns the race winner |
 | **Poison message** (keeps getting orphaned, or unparseable) | each reclaim bumps `Job.attempts`; past `_MAX_ATTEMPTS` (5) it's moved to the **dead-letter queue** (`workbench:jobs:dead`) instead of looping forever — `dead_letter_count()` surfaces the depth for ops |
 
 ## Not done on purpose
 
-Per-job **visibility-timeout/lease** (reclaiming only jobs whose lease expired, vs.
-all of `processing` on startup) and true **exactly-once** with partial-result
-checkpointing are out of scope — at that point the right move is a purpose-built
-engine (Temporal/arq), not more bespoke Redis choreography. A bounded **dead-letter
-queue + max-retries** *is* implemented (above), since that is standard queue hygiene
-rather than durable-execution machinery. ADR-010 records this boundary.
+A **queue-level** per-job visibility-timeout (`reclaim()` still drains *all* of
+`processing` on startup rather than only jobs whose Redis-side lease expired) and
+true **exactly-once** with partial-result checkpointing are out of scope — at that
+point the right move is a purpose-built engine (Temporal/arq), not more bespoke
+Redis choreography. Note the *correctness* gap that a queue-level lease would close
+— two workers executing the same live job — is already closed at the **run layer**
+by `claim_run`'s atomic lease (a redelivered live run is claimed by exactly one
+worker), so the remaining queue-level work is efficiency, not safety. A bounded
+**dead-letter queue + max-retries** *is* implemented (above), since that is standard
+queue hygiene rather than durable-execution machinery. ADR-010 records this boundary.
 
 **Related:** [ADR-010](../wiki/decisions/adr-010-durable-async-runs.md) ·
 `platform/jobs/src/workbench_jobs/queue.py` ·

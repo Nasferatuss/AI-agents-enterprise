@@ -24,6 +24,7 @@ from workbench_jobs import Job, get_queue, register_handler
 
 from workbench_app_autonomous.agent import AutonomousResult, run_autonomous
 from workbench_observability import (
+    claim_run,
     create_run,
     get_run,
     get_run_by_idempotency_key,
@@ -38,7 +39,6 @@ from workbench_shared.config import get_settings
 router = APIRouter(prefix="/v1/apps/autonomous", tags=["autonomous-agent"])
 
 _KIND = "autonomous"
-_TERMINAL_STATUSES = {"completed", "max_steps_reached", "failed"}
 
 
 class RunRequest(BaseModel):
@@ -95,15 +95,19 @@ async def _heartbeat(run_id: str, interval: float) -> None:
 
 async def _execute_run(run_id: str, goal: str) -> None:
     """Background worker: run the agent and persist terminal state. Never raises."""
-    # Effectively-once: at-least-once delivery can re-deliver a run (reclaim, a
-    # reconcile re-enqueue). If it already finished, don't redo the costly work.
-    existing = await get_run(run_id)
-    if existing is not None and existing.status in _TERMINAL_STATUSES:
+    # Single-active-execution: at-least-once delivery can re-deliver a run (a Redis
+    # reclaim, a reconcile re-enqueue) to more than one worker at the same time. A
+    # read-then-check would leave a TOCTOU window where two workers both see the run
+    # not-yet-terminal and both execute it. Instead atomically CLAIM it: an UPDATE
+    # that flips pending→running (or steals a running run whose lease has expired,
+    # i.e. its previous owner is presumed dead). Exactly one caller wins the claim;
+    # a concurrent/duplicate delivery gets False and returns without redoing the work.
+    settings = get_settings()
+    if not await claim_run(run_id=run_id, lease_seconds=settings.run_stuck_ttl_s):
         return
 
     started = time.monotonic()
-    await upsert_run(run_id=run_id, kind=_KIND, status="running", payload={"goal": goal})
-    heartbeat = asyncio.create_task(_heartbeat(run_id, get_settings().run_heartbeat_interval_s))
+    heartbeat = asyncio.create_task(_heartbeat(run_id, settings.run_heartbeat_interval_s))
     try:
         try:
             result = await run_autonomous(get_router(), goal)

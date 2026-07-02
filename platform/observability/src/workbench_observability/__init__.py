@@ -2,6 +2,7 @@
 
 from workbench_observability.db import init_db, reset_engine
 from workbench_observability.runs import (
+    claim_run,
     create_run,
     get_run,
     get_run_by_idempotency_key,
@@ -32,6 +33,7 @@ __all__ = [
     "TraceDetail",
     "TraceSummary",
     "aggregates",
+    "claim_run",
     "create_run",
     "get_run",
     "get_run_by_idempotency_key",

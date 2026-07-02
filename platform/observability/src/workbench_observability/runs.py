@@ -17,7 +17,7 @@ degrades to the old in-memory behavior instead of breaking the request.
 
 import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from workbench_observability.db import get_sessionmaker
@@ -151,6 +151,51 @@ async def create_run(
             created_at=now,
             updated_at=now,
         )
+
+
+async def claim_run(*, run_id: str, lease_seconds: int) -> bool:
+    """Atomically transition a run to ``running`` iff it is *claimable*, returning
+    ``True`` only for the caller that won the claim.
+
+    Claimable = the row is ``pending`` (never started) **or** ``running`` but with a
+    heartbeat (``updated_at``) older than ``lease_seconds`` — i.e. its previous owner
+    is presumed dead (a *lease*/visibility-timeout). This is a single compare-and-set
+    ``UPDATE ... WHERE`` (not read-then-write), so when the same run is delivered to
+    two workers concurrently the database serializes the row update and exactly one
+    gets ``rowcount == 1``; the loser sees the row already ``running`` with a fresh
+    heartbeat and returns ``False``. This closes the double-execution window the old
+    read-then-check had — a run is only ever actively executed by one worker.
+
+    A run whose owner genuinely crashed becomes claimable again once its lease
+    expires, so it can be re-driven; the stuck-run sweeper is the terminal backstop.
+
+    On a store error we log and return ``True`` (fail-open): durability is a mirror,
+    so a DB outage degrades to the old in-memory behavior rather than dropping the run.
+    """
+    now = datetime.datetime.now(datetime.UTC)
+    stale_cutoff = _fmt(now - datetime.timedelta(seconds=lease_seconds))
+    try:
+        async with get_sessionmaker()() as session:
+            stmt = (
+                update(AgentRun)
+                .where(
+                    AgentRun.id == run_id,
+                    or_(
+                        AgentRun.status == "pending",
+                        and_(
+                            AgentRun.status == "running",
+                            AgentRun.updated_at < stale_cutoff,
+                        ),
+                    ),
+                )
+                .values(status="running", updated_at=_fmt(now))
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            return (result.rowcount or 0) == 1
+    except Exception as exc:  # noqa: BLE001 — fail-open: mirror outage must not drop the run
+        log.warning("run claim failed (proceeding fail-open)", run_id=run_id, error=str(exc))
+        return True
 
 
 async def get_run(run_id: str) -> RunRecord | None:

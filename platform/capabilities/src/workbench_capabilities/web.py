@@ -10,6 +10,7 @@ Fetched bodies are cached by URL (``BODY_CACHE``) so the report stage can cite
 the real text it already retrieved without a second network round-trip.
 """
 
+import asyncio
 import re
 from collections import OrderedDict
 
@@ -53,8 +54,8 @@ _USER_AGENT = (
 _WS = re.compile(r"\s+")
 
 
-def web_search(args: dict) -> list[dict]:
-    """Live DuckDuckGo search. Returns [{title, url, snippet}] (corpus shape)."""
+def _web_search_blocking(args: dict) -> list[dict]:
+    """Synchronous DuckDuckGo search. Runs off the event loop (see ``web_search``)."""
     query = str(args.get("query", "")).strip()
     if not query:
         return []
@@ -80,6 +81,16 @@ def web_search(args: dict) -> list[dict]:
     return out
 
 
+async def web_search(args: dict) -> list[dict]:
+    """Live DuckDuckGo search (event-loop-safe). Returns [{title, url, snippet}].
+
+    ``ddgs.text`` opens a real socket and blocks; running it directly in the async
+    tool-dispatch path would freeze every other in-flight request on the loop. We
+    offload the blocking call to a worker thread so the gateway stays responsive.
+    """
+    return await asyncio.to_thread(_web_search_blocking, args)
+
+
 def _extract(html: str) -> tuple[str, str]:
     soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "noscript"]):
@@ -89,12 +100,8 @@ def _extract(html: str) -> tuple[str, str]:
     return title, text
 
 
-def fetch(args: dict) -> dict:
-    """Live fetch: download `url`, extract readable text. Returns {url, title, text}.
-
-    On failure returns the url with empty text rather than raising, so one bad
-    URL doesn't abort the research loop. Successful bodies are cached by URL.
-    """
+def _fetch_blocking(args: dict) -> dict:
+    """Synchronous fetch. Runs off the event loop (see ``fetch``)."""
     url = str(args.get("url", "")).strip()
     if not url:
         return {"url": url, "title": "", "text": ""}
@@ -113,6 +120,18 @@ def fetch(args: dict) -> dict:
     result = {"url": url, "title": title or url, "text": text}
     BODY_CACHE[url] = {"title": result["title"], "text": text}
     return result
+
+
+async def fetch(args: dict) -> dict:
+    """Live fetch (event-loop-safe): download `url`, extract text. {url, title, text}.
+
+    ``safe_get`` does DNS resolution (``socket.getaddrinfo``) plus a blocking
+    ``httpx.Client`` request per redirect hop — all synchronous I/O. Offload to a
+    worker thread so a slow fetch (up to ``_TIMEOUT`` per hop) can't stall the loop.
+    On failure returns the url with empty text rather than raising, so one bad URL
+    doesn't abort the research loop. Successful bodies are cached by URL.
+    """
+    return await asyncio.to_thread(_fetch_blocking, args)
 
 
 _SPECS = {

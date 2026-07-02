@@ -3,6 +3,7 @@
 import datetime
 
 from workbench_observability import (
+    claim_run,
     create_run,
     get_run,
     get_run_by_idempotency_key,
@@ -12,6 +13,8 @@ from workbench_observability import (
     touch_run,
     upsert_run,
 )
+from workbench_observability.db import get_sessionmaker
+from workbench_observability.models import AgentRun
 from workbench_observability.runs import _fmt
 
 
@@ -91,6 +94,40 @@ def test_timestamp_format_is_fixed_width_and_chronological():
     assert len(a) == len(b)  # fixed width regardless of microseconds
     assert a.endswith("Z") and ".000000Z" in a  # zero micros NOT truncated
     assert a < b  # lexical order matches chronological order
+
+
+async def test_claim_run_only_one_winner(trace_db):
+    # Compare-and-set: a run delivered to two workers at once must be claimed by
+    # exactly one — the other sees it already running (fresh lease) and backs off.
+    await create_run(run_id="r", kind="autonomous", status="pending", payload={})
+    first = await claim_run(run_id="r", lease_seconds=900)
+    second = await claim_run(run_id="r", lease_seconds=900)
+    assert first is True and second is False
+    assert (await get_run("r")).status == "running"
+
+
+async def test_claim_run_rejects_terminal(trace_db):
+    # A run that already finished is never re-claimed (no redundant re-execution).
+    await create_run(run_id="done", kind="autonomous", status="pending", payload={})
+    await upsert_run(run_id="done", kind="autonomous", status="completed", payload={})
+    assert await claim_run(run_id="done", lease_seconds=900) is False
+    assert (await get_run("done")).status == "completed"
+
+
+async def test_claim_run_steals_expired_lease(trace_db):
+    # A run stuck 'running' because its owner crashed becomes claimable again once
+    # its heartbeat is older than the lease — so orphaned work can be re-driven.
+    await upsert_run(run_id="orphan", kind="autonomous", status="running", payload={})
+    # Backdate the heartbeat well past any positive lease.
+    stale = _fmt(datetime.datetime.now(datetime.UTC) - datetime.timedelta(seconds=10_000))
+    async with get_sessionmaker()() as s:
+        row = await s.get(AgentRun, "orphan")
+        row.updated_at = stale
+        await s.commit()
+    assert await claim_run(run_id="orphan", lease_seconds=900) is True  # lease expired → steal
+    # A fresh lease is NOT stealable.
+    await upsert_run(run_id="fresh", kind="autonomous", status="running", payload={})
+    assert await claim_run(run_id="fresh", lease_seconds=900) is False
 
 
 async def test_touch_run_bumps_updated_at(trace_db):

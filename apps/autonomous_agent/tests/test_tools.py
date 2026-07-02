@@ -109,47 +109,59 @@ async def test_run_sql_rejects_write():
 # --- web tools (monkeypatched, no network) ---
 
 
-def test_web_search_shape(monkeypatch):
-    monkeypatch.setattr(
-        tools.web,
-        "web_search",
-        lambda args: [
+async def test_web_search_shape(monkeypatch):
+    async def _fake_search(args):
+        return [
             {"title": "T", "url": "http://x", "snippet": "S"},
             {"title": "T2", "url": "http://y", "snippet": "S2"},
-        ],
-    )
-    out = tools._web_search(WebSearchInput(query="anything"))
+        ]
+
+    monkeypatch.setattr(tools.web, "web_search", _fake_search)
+    out = await tools._web_search(WebSearchInput(query="anything"))
     data = json.loads(out)
     assert data[0] == {"title": "T", "url": "http://x", "snippet": "S"}
 
 
-def test_fetch_url_returns_text(monkeypatch):
-    monkeypatch.setattr(
-        tools.web, "fetch", lambda args: {"url": args["url"], "title": "t", "text": "body text"}
-    )
+async def test_fetch_url_returns_text(monkeypatch):
+    async def _fake_fetch(args):
+        return {"url": args["url"], "title": "t", "text": "body text"}
+
+    monkeypatch.setattr(tools.web, "fetch", _fake_fetch)
     # public IP literal: passes the SSRF guard without a DNS lookup (network-free).
-    assert tools._fetch_url(FetchUrlInput(url="http://93.184.216.34/")) == "body text"
+    assert await tools._fetch_url(FetchUrlInput(url="http://93.184.216.34/")) == "body text"
 
 
-def test_fetch_url_empty(monkeypatch):
-    monkeypatch.setattr(
-        tools.web, "fetch", lambda args: {"url": args["url"], "title": "", "text": ""}
-    )
-    assert "no readable text" in tools._fetch_url(FetchUrlInput(url="http://93.184.216.34/"))
+async def test_fetch_url_empty(monkeypatch):
+    async def _fake_fetch(args):
+        return {"url": args["url"], "title": "", "text": ""}
+
+    monkeypatch.setattr(tools.web, "fetch", _fake_fetch)
+    out = await tools._fetch_url(FetchUrlInput(url="http://93.184.216.34/"))
+    assert "no readable text" in out
 
 
-def test_fetch_url_rejects_metadata_ip(monkeypatch):
+async def test_fetch_url_rejects_metadata_ip(monkeypatch):
     # SSRF guard must refuse the cloud metadata endpoint before any fetch happens.
     called = {"fetch": False}
-    monkeypatch.setattr(tools.web, "fetch", lambda args: called.__setitem__("fetch", True) or {})
-    out = tools._fetch_url(FetchUrlInput(url="http://169.254.169.254/latest/meta-data/"))
+
+    async def _fake_fetch(args):
+        called["fetch"] = True
+        return {}
+
+    monkeypatch.setattr(tools.web, "fetch", _fake_fetch)
+    out = await tools._fetch_url(FetchUrlInput(url="http://169.254.169.254/latest/meta-data/"))
     assert out.startswith("rejected:")
     assert called["fetch"] is False
 
 
-def test_fetch_url_rejects_loopback(monkeypatch):
+async def test_fetch_url_rejects_loopback(monkeypatch):
     called = {"fetch": False}
-    monkeypatch.setattr(tools.web, "fetch", lambda args: called.__setitem__("fetch", True) or {})
-    out = tools._fetch_url(FetchUrlInput(url="http://127.0.0.1/admin"))
+
+    async def _fake_fetch(args):
+        called["fetch"] = True
+        return {}
+
+    monkeypatch.setattr(tools.web, "fetch", _fake_fetch)
+    out = await tools._fetch_url(FetchUrlInput(url="http://127.0.0.1/admin"))
     assert out.startswith("rejected:")
     assert called["fetch"] is False

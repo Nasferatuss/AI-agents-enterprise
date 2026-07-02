@@ -16,6 +16,7 @@ or ``data/agent_workspace``) and whose ``_safe_path`` rejects absolute paths and
 and DDL rejected by the guard). Web access degrades to empty results on failure.
 """
 
+import asyncio
 import json
 import os
 from functools import lru_cache
@@ -48,8 +49,8 @@ class WebSearchInput(BaseModel):
     query: str = Field(description="Web search query.")
 
 
-def _web_search(inp: WebSearchInput) -> str:
-    hits = web.web_search({"query": inp.query, "max_results": _MAX_SEARCH_RESULTS})
+async def _web_search(inp: WebSearchInput) -> str:
+    hits = await web.web_search({"query": inp.query, "max_results": _MAX_SEARCH_RESULTS})
     out = [
         {"title": h.get("title", ""), "url": h.get("url", ""), "snippet": h.get("snippet", "")}
         for h in hits[:_MAX_SEARCH_RESULTS]
@@ -61,14 +62,15 @@ class FetchUrlInput(BaseModel):
     url: str = Field(description="Absolute http(s) URL to fetch.")
 
 
-def _fetch_url(inp: FetchUrlInput) -> str:
+async def _fetch_url(inp: FetchUrlInput) -> str:
     try:
-        assert_public_url(inp.url)
+        # assert_public_url resolves DNS (blocking getaddrinfo); keep it off the loop.
+        await asyncio.to_thread(assert_public_url, inp.url)
     except UnsafeUrlError as exc:
         # SSRF guard: refuse private/loopback/metadata targets and non-http(s)
         # schemes. Return the message so the agent self-corrects instead of crashing.
         return f"rejected: {exc}"
-    result = web.fetch({"url": inp.url})
+    result = await web.fetch({"url": inp.url})
     text = result.get("text", "")
     if not text:
         return f"(no readable text fetched from {inp.url})"

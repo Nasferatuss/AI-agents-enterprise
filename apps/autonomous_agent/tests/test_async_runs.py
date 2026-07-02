@@ -100,8 +100,8 @@ async def test_execute_run_skips_already_terminal(run_store, monkeypatch):
         return _fake_result(goal)
 
     monkeypatch.setattr(api, "run_autonomous", fake_run)
-    # A run re-delivered by reclaim/reconcile that already finished must NOT be redone
-    # (effectively-once: at-least-once delivery + idempotent handler).
+    # A run re-delivered by reclaim/reconcile that already finished must NOT be redone:
+    # the atomic claim rejects a terminal row (at-least-once delivery + idempotent claim).
     await upsert_run(run_id="done", kind="autonomous", status="completed", payload={"goal": "x"})
     await api._execute_run("done", "x")
     assert calls["n"] == 0
