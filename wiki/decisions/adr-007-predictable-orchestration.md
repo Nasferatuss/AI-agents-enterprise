@@ -13,7 +13,7 @@ workflow (явные шаги, transitions, retries, approval gates), а не с
 
 **Обоснование:** Anthropic рекомендует не усложнять агентные системы без необходимости
 и использовать **composable patterns**. Это также снижает риск «слишком много технологий»
-и нестабильности → [[risk-register]].
+и нестабильности.
 
 **Следствие:** human-in-the-loop approval перед risky action (Sprint 4.1) → [[governance]].
 

@@ -8,7 +8,7 @@ updated: 2026-06-10
 # Enterprise RAG Evaluation Lab
 
 **Роль:** MVP-модуль №3 — демонстрация зрелого AI Engineering. Отличает проект от
-«обычного чата с PDF» (см. [[risk-register]]).
+«обычного чата с PDF».
 
 **Что делает:** [[rag]] pipeline + строгая оценка качества retrieval и ответов.
 
@@ -33,7 +33,7 @@ citation accuracy ([n]-маркеры против retrieved chunks), RAG answer
 «чатом с PDF».
 
 **Метрики:** retrieval hit rate 70%+/85%+, citation accuracy 70%+/85%+, context
-precision/recall, faithfulness, answer relevance → [[kpi-and-metrics]] · [[evals]].
+precision/recall, faithfulness, answer relevance → [[evals]].
 **Связи:** [[synthetic-eval-generator]] (датасеты), [[text-to-sql-rag-agent]].
 
 ## Sources

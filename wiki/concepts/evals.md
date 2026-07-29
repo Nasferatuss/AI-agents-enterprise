@@ -36,7 +36,7 @@ Pass-критерий = выполнены условия grader'ов на ка�
 
 Разделение **model graders (LLM-судьи) vs rule-based** (string check / regex / python) —
 прямое обоснование нашего harness: дешёвые rule-based метрики там, где есть ground truth,
-LLM-judges — там, где нужна семантическая оценка. Связь со стоимостью API при evals → [[risk-register]].
+LLM-judges — там, где нужна семантическая оценка. Связь со стоимостью API при evals.
 
 **Evaluation Engine v0 — реализован (Sprint 2.1, 2026-06-10):** `platform/evals` —
 датасеты (QAExample/EvalDataset), retrieval-метрики без LLM, citation accuracy,
@@ -47,10 +47,9 @@ LLM-judges (faithfulness, answer relevance; complexity=judge → frontier-tier �
 **Стек:** custom harness (v0, сделан); Ragas/DeepEval/promptfoo — опционально позже → [[tech-stack]].
 
 **Связанные модули:** [[rag-evaluation-lab]], [[synthetic-eval-generator]] (датасеты),
-[[text-to-sql-rag-agent]]. Eval regression — часть QA (Phase 4) → [[phases-and-sprints]].
+[[text-to-sql-rag-agent]]. Eval regression — часть QA (Phase 4).
 
-**Метрики по направлениям** см. [[kpi-and-metrics]]. Риски: стоимость API при evals,
-недостоверность synthetic dataset → [[risk-register]].
+**Риски:** стоимость API при evals, недостоверность synthetic dataset.
 
 ## Sources
 - `Дорожная карта.pdf` стр. 9–11, 14, 21–22.

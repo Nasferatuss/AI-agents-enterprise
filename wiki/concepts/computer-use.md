@@ -55,10 +55,10 @@ mapping при downscaling изображений.
 **Стек:** Playwright + screenshot/action traces; опц. computer-use API → [[tech-stack]].
 
 **Модуль-витрина:** [[guarded-computer-use-qa-agent]] (Sprint 8) — на controlled legacy
-UI sandbox с guardrails и retries (риск нестабильности → [[risk-register]]).
+UI sandbox с guardrails и retries.
 
 **Метрики:** scenario completion, action accuracy, recovery after UI error, bug report
-usefulness → [[kpi-and-metrics]].
+usefulness.
 
 ## Sources
 - `Дорожная карта.pdf` стр. 4, 13–14.

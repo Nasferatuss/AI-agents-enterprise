@@ -17,7 +17,7 @@ updated: 2026-06-07
 дублируются в каждом модуле. Совпадает с индустрией (OpenAI: model+tools+guardrails+orchestration+evals; Anthropic: composable patterns, MCP).
 
 **Следствие:** monorepo с `platform/` (слои) и `apps/` (модули). Риск поддержки
-monorepo митигируется чёткой структурой, Makefile, Docker Compose, docs → [[risk-register]].
+monorepo митигируется чёткой структурой, Makefile, Docker Compose, docs.
 
 **Уточнение (2026-06-20):** ревью выявило горизонтальную связь app→app — флагман
 `autonomous` импортировал SQL-guard/engine из `text2sql` и web-коннекторы из

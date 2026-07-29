@@ -16,9 +16,9 @@ updated: 2026-06-07
 - **no arbitrary shell execution**.
 
 **Обоснование:** Anthropic описывает MCP как открытый стандарт, но connectivity = риск;
-governance должен быть встроен в gateway, а не пристроен сбоку. См. [[governance]] · [[risk-register]].
+governance должен быть встроен в gateway, а не пристроен сбоку. См. [[governance]].
 
-**Связи:** [[mcp-deep-research-agent]], Sprint 7 → [[phases-and-sprints]].
+**Связи:** [[mcp-deep-research-agent]], Sprint 7.
 
 ## Sources
 - `Дорожная карта.pdf` стр. 13, 19.

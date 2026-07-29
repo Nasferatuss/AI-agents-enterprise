@@ -20,7 +20,7 @@ updated: 2026-06-07
 размывает качество. Правильная стратегия — MVP (ядро + 3) → Portfolio (10) → Showcase.
 
 **Следствие:** остальные 6 модулей — через phased rollout (Sprints 6–9). Жёсткий
-release plan: MVP публично за 8–10 недель → [[phases-and-sprints]] · [[risk-register]].
+release plan: MVP публично за 8–10 недель.
 
 ## Sources
 - `Дорожная карта.pdf` стр. 2, 7, 23–24.

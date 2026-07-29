@@ -22,9 +22,9 @@ LLM (30B/70B) без серьёзных компромиссов.
 - архитектура переключает модели через единый model-router (LiteLLM или свой).
 
 **Обоснование:** реалистичность под железо + контроль стоимости API
-(batch evals, caching, маленькие judge-модели) → [[risk-register]].
+(batch evals, caching, маленькие judge-модели).
 
-**Связи:** [[tech-stack]], Phase 1 Discovery 4 (feasibility) → [[phases-and-sprints]].
+**Связи:** [[tech-stack]], Phase 1 Discovery 4 (feasibility).
 
 ## Sources
 - `Дорожная карта.pdf` стр. 3–4, 8, 19.

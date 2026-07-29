@@ -63,7 +63,7 @@ QA-агент водит его **только через Tool Gateway** (action
 audit); scenario runner → bug report. Страница `/qa`. v0 = виртуальный UI за тем же action-
 интерфейсом (production → Playwright+vision). Модуль №8 active. **178 тестов, 8 из 10 модулей готовы.**
 Следующий шаг — **Sprint 9 — Synthetic Eval Generator + Incident Response** (модули №9,10, последние;
-ложатся на готовый код evals/observability) ЛИБО Phase 5 Launch. Детали → [[phases-and-sprints]].
+ложатся на готовый код evals/observability) ЛИБО Phase 5 Launch.
 
 ## Архитектура
 - [[service-oriented-core]] — главный архитектурный паттерн
@@ -98,11 +98,6 @@ audit); scenario runner → bug report. Страница `/qa`. v0 = вирту�
 - [[adr-009-deployment-topology]]
 - [[adr-010-durable-async-runs]] — durable run store, async run-модель, idempotency (hardening 2026-06-20)
 
-## Планирование
-- [[phases-and-sprints]] — Discovery → Design → Dev (Sprint 0–10) → QA → Launch → Post-Launch
-- [[kpi-and-metrics]] — технические, AI-quality и portfolio метрики
-- [[budget-and-resources]] — финансовый план
-- [[risk-register]] — реестр рисков
 
 ## Источники
 - `sources/Дорожная карта.pdf` — полный roadmap проекта (24 стр.)

@@ -33,10 +33,9 @@ embeddings, hybrid search, reranking, citations.
 [[business-process-investigator]], [[compliance-risk-reviewer]], [[mcp-deep-research-agent]].
 
 **Качество (метрики):** retrieval hit rate, citation accuracy, context precision/recall,
-faithfulness, answer relevance, answer groundedness → [[evals]] · [[kpi-and-metrics]].
+faithfulness, answer relevance, answer groundedness → [[evals]].
 
 **Риск:** «чат с PDF» → акцент на eval lab, corrective RAG, citation accuracy, regression.
-См. [[risk-register]].
 
 ## Sources
 - `Дорожная карта.pdf` стр. 2, 10, 22.

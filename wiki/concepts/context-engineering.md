@@ -68,7 +68,7 @@ OpenAI в *practical guide* сводит агента к трём компоне
 
 **Связи:** [[rag]] (retrieval), [[mcp-tool-use]] (tools, augmented LLM, agent-паттерны),
 [[evals]] (model baseline), [[agent-observability-console]] (сохранённый контекст в trace),
-Agent Runtime · [[adr-008-model-router-design]]. См. [[phases-and-sprints]].
+Agent Runtime · [[adr-008-model-router-design]].
 
 ## Sources
 - `Дорожная карта.pdf` стр. 2, 10.

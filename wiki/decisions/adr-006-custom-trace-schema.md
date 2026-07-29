@@ -18,7 +18,7 @@ updated: 2026-06-07
 **Обоснование:** observability — сквозной MVP-приоритет ([[agent-observability-console]]),
 но ценность в proof of production thinking, а не в воспроизведении целого продукта.
 
-**Связи:** Design 5 + Sprint 5 → [[phases-and-sprints]] · [[kpi-and-metrics]] (runs with full trace 100%).
+**Связи:** Design 5 + Sprint 5 — runs with full trace 100%.
 
 ## Sources
 - `Дорожная карта.pdf` стр. 12, 20.

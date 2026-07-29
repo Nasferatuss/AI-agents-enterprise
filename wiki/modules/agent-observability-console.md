@@ -31,7 +31,7 @@ dashboard (total runs, success rate, p95 latency, total cost), failure taxonomy,
 
 Начинать с **custom trace schema**, не строить LangSmith-клон → [[adr-006-custom-trace-schema]].
 
-**Метрики:** runs with full trace 100%, p95 latency, cost per demo run → [[kpi-and-metrics]].
+**Метрики:** runs with full trace 100%, p95 latency, cost per demo run.
 **Связи:** питает [[incident-response-agent]] (failed traces), используется всеми модулями.
 
 ## Sources

@@ -23,7 +23,7 @@ calibration) — прямо митигирует риск «датасет не�
 **Стек:** LLM API/local LLM, Pydantic.
 
 **Риск:** датасет может быть недостоверным → human calibration subset, negative cases,
-benchmark cards. См. [[risk-register]].
+benchmark cards.
 
 **Связи:** [[rag-evaluation-lab]], [[text-to-sql-rag-agent]], [[evals]].
 

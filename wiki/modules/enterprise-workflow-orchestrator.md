@@ -45,7 +45,7 @@ pending-approval и audit видны в UI.
 > composable patterns → начинать с **предсказуемых** workflow, а не автономной «магии».
 > См. [[adr-007-predictable-orchestration]].
 
-**Метрики:** workflow completion rate 70%+ (MVP) / 85%+ (portfolio) → [[kpi-and-metrics]].
+**Метрики:** workflow completion rate 70%+ (MVP) / 85%+ (portfolio).
 **Связи:** [[agent-observability-console]] (traces), [[incident-response-agent]] (failed runs).
 
 ## Sources

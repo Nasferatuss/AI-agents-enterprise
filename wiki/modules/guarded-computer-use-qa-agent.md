@@ -40,7 +40,7 @@ generic `_run_scenario` — оба заложенных бага находят�
 «Playwright за тем же action-интерфейсом», что закладывалась в v0.
 
 **Риск:** нестабильность агента (high) → controlled legacy UI sandbox, Playwright traces,
-retries. См. [[risk-register]].
+retries.
 
 > OpenAI описывает computer-use как работу модели с UI; Anthropic называет это
 > следующим frontier-направлением.

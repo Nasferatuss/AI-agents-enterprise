@@ -21,7 +21,7 @@ run, API + UI `/observability` (dashboard, failure taxonomy, trace detail) → [
 **Модуль-витрина:** [[agent-observability-console]]. Питает [[incident-response-agent]]
 (failed traces → RCA).
 
-**Метрика:** runs with full trace 100% → [[kpi-and-metrics]].
+**Метрика:** runs with full trace 100%.
 
 ## Sources
 - `Дорожная карта.pdf` стр. 3, 12.

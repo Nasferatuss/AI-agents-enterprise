@@ -17,7 +17,7 @@ updated: 2026-06-07
 - выполнение в **sandbox DB**.
 
 **Обоснование:** tool connectivity к БД — серьёзная поверхность риска; нужны guardrails
-на уровне execution, а не только промпта. См. [[governance]] · [[risk-register]].
+на уровне execution, а не только промпта. См. [[governance]].
 
 ## Sources
 - `Дорожная карта.pdf` стр. 19 (risk register).

@@ -24,10 +24,10 @@ recommendation), как в [[compliance-risk-reviewer]]. API `GET /v1/apps/incid
 **Стек:** Observability Layer, Eval Engine.
 
 **Риск:** слабость без реальных инцидентов → создать synthetic failed traces:
-bad retrieval, SQL error, timeout, hallucination. См. [[risk-register]].
+bad retrieval, SQL error, timeout, hallucination.
 
 **Метрики:** RCA generated for failed runs 70%+/90%+, root cause classification accuracy,
-fix recommendation usefulness → [[kpi-and-metrics]].
+fix recommendation usefulness.
 **Связи:** [[observability]], [[evals]], [[enterprise-workflow-orchestrator]].
 
 ## Sources

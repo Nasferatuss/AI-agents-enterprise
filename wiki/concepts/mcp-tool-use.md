@@ -94,7 +94,7 @@ OpenAI делит оркестрацию на две категории и ре�
 **Стек:** MCP SDK / JSON-RPC style contracts → [[tech-stack]].
 
 **Модуль-витрина:** [[mcp-deep-research-agent]] (Sprint 7). Tool call success rate
-80%+/90% → [[kpi-and-metrics]] · [[governance]].
+80%+/90% → [[governance]].
 
 ## Sources
 - `Дорожная карта.pdf` стр. 3, 13.

@@ -39,10 +39,10 @@ provider/model/latency/cost, tool-вызовы с ok/error). CORS в gateway
 **Стек:** PostgreSQL, SQLAlchemy, Pydantic, Next.js, Recharts.
 
 **Безопасность:** риск опасного SQL высокий → только **read-only**, SQL parser,
-allowlist таблиц, LIMIT, sandbox DB. См. [[adr-004-readonly-sql-safety]] и [[risk-register]].
+allowlist таблиц, LIMIT, sandbox DB. См. [[adr-004-readonly-sql-safety]].
 
 **Метрики:** valid SQL rate 80%+/90%+, execution success 75%+/90%+, schema linking
-accuracy, business answer correctness → [[kpi-and-metrics]] · [[evals]].
+accuracy, business answer correctness → [[evals]].
 **Связи:** [[rag]] (контекст по schema/докам), [[agent-observability-console]].
 
 ## Sources

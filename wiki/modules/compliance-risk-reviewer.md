@@ -28,9 +28,9 @@ rule-based** (defensible, не «LLM-vibes») — LLM пишет только na
 **Стек:** Policy Engine, RAG, PII checks → [[governance]].
 
 Помогает против риска «governance выглядит формально»: реальные policy gates —
-PII, approval, tool permissions, risk report. См. [[risk-register]].
+PII, approval, tool permissions, risk report.
 
-**Метрики:** PII detection rate, approval compliance, blocked unsafe tool calls → [[kpi-and-metrics]].
+**Метрики:** PII detection rate, approval compliance, blocked unsafe tool calls.
 **Связи:** [[business-process-investigator]], [[governance]].
 
 ## Sources

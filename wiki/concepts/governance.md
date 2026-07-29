@@ -10,8 +10,7 @@ updated: 2026-06-13
 approval gates, audit log. Policy engine на YAML/JSON rules.
 
 McKinsey (2026) выделяет agentic AI trust, governance и risk controls как ключевые
-барьеры масштабирования AI в бизнесе — поэтому governance это реальные gates, а не формальность
-(риск «governance выглядит формально» → [[risk-register]]).
+барьеры масштабирования AI в бизнесе — поэтому governance это реальные gates, а не формальность.
 
 ## Guardrails как layered defense (OpenAI — practical guide)
 
@@ -49,8 +48,8 @@ HITL approval-gate в [[enterprise-workflow-orchestrator]] → [[adr-007-predict
 - [[compliance-risk-reviewer]] — risk report по policy rules.
 
 **Метрики:** risky actions behind approval gate 100%, PII detection rate, approval
-compliance, blocked unsafe tool calls → [[kpi-and-metrics]].
-QA: Security & Governance QA, incl. prompt injection cases → [[phases-and-sprints]].
+compliance, blocked unsafe tool calls.
+QA: Security & Governance QA, incl. prompt injection cases.
 
 ## Реализовано (частично)
 
