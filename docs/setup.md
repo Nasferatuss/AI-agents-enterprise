@@ -68,7 +68,7 @@ ollama pull qwen3:14b
 ```
 hostname
 ```
-Допустим, вывело `GAMING-PC`. Тогда адрес для Mac: `http://gaming-pc.local:11434`.
+Допустим, вывело `DESKTOP-PC`. Тогда адрес для Mac: `http://desktop-pc.local:11434`.
 
 ---
 
@@ -82,12 +82,12 @@ Tailscale снимает обе проблемы: бесплатно, 10 мин�
 3. В админке https://login.tailscale.com/admin/dns включить **MagicDNS**
    (обычно включён по умолчанию).
 4. Теперь GPU-машина доступна по стабильному имени вида
-   `gaming-pc.tail1234.ts.net` (видно в админке или `tailscale status`),
+   `desktop-pc.tail1234.ts.net` (видно в админке или `tailscale status`),
    с любой сети и из Docker-контейнеров.
 
 Проверка с Mac:
 ```bash
-curl http://gaming-pc.tail1234.ts.net:11434/api/version
+curl http://desktop-pc.tail1234.ts.net:11434/api/version
 ```
 
 > Файрвол из шага 1.3 для Tailscale-трафика: Windows обычно пропускает трафик
@@ -109,8 +109,8 @@ cp .env.example .env
 
 ```dotenv
 # адрес GPU-машины — ОДИН из вариантов:
-WB_LOCAL_LLM_BASE_URL=http://gaming-pc.local:11434              # вариант A: mDNS (только LAN, не работает из docker compose)
-# WB_LOCAL_LLM_BASE_URL=http://gaming-pc.tail1234.ts.net:11434  # вариант B: Tailscale (рекомендую)
+WB_LOCAL_LLM_BASE_URL=http://desktop-pc.local:11434              # вариант A: mDNS (только LAN, не работает из docker compose)
+# WB_LOCAL_LLM_BASE_URL=http://desktop-pc.tail1234.ts.net:11434  # вариант B: Tailscale (рекомендую)
 
 WB_LOCAL_LLM_MODEL=qwen2.5:3b-instruct
 
@@ -198,7 +198,7 @@ chromium для обычного прогона не нужен.
 | Симптом | Причина / решение |
 |---|---|
 | `/v1/chat` с `complexity=simple` отвечает не с `"provider":"local"` | 4090 недоступна — роутер ушёл в fallback. Проверь `curl http://<адрес-4090>:11434/api/version` с Mac |
-| `curl: Could not resolve host: gaming-pc.local` | mDNS не резолвится: проверь, что обе машины в одной сети/VLAN; либо переходи на Tailscale (Часть 2) |
+| `curl: Could not resolve host: desktop-pc.local` | mDNS не резолвится: проверь, что обе машины в одной сети/VLAN; либо переходи на Tailscale (Часть 2) |
 | Работает `make api`, но не работает из `make up` | `.local` не резолвится внутри Linux-контейнеров. Используй Tailscale-имя в `WB_LOCAL_LLM_BASE_URL` |
 | `ollama: connection refused` с Mac, но локально на GPU-машине работает | `OLLAMA_HOST=0.0.0.0` не применился (перезапусти Ollama целиком) или файрвол режет 11434 |
 | Провайдер в `/v1/models` показан `disabled` | Ключ не подхватился: ключи читаются из окружения процесса; при `make api` поставь их в `.env` (pydantic-settings читает `.env` из корня) |
