@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-12
 ---
 
@@ -46,4 +46,4 @@ accuracy, business answer correctness → [[evals]].
 **Связи:** [[rag]] (контекст по schema/докам), [[agent-observability-console]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 11 (Sprint 3), стр. 19 (риск SQL), стр. 22 (метрики).
+- `project roadmap (internal)` p. 11 (Sprint 3), стр. 19 (риск SQL), стр. 22 (метрики).

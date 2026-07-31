@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf", "OpenAI — Computer use"]
+sources: ["project roadmap (internal)", "OpenAI — Computer use"]
 updated: 2026-06-13
 ---
 
@@ -47,7 +47,7 @@ updated: 2026-06-13
 > версии OpenAI-доки (*Computer use*, 2026-06-13) эти именованные поля **не показаны** — safety
 > описан как environmental isolation + untrusted-input validation + human oversight. Возможны
 > две версии API/документации; до перепроверки опираться на прочитанный first-source.
-> Источники: `Дорожная карта.pdf`; OpenAI — *Computer use* (URL ниже).
+> Источники: `project roadmap (internal)`; OpenAI — *Computer use* (URL ниже).
 
 **Ограничения (первоисточник):** работа в рамках разрешения screenshot и точности coordinate
 mapping при downscaling изображений.
@@ -61,7 +61,7 @@ UI sandbox с guardrails и retries.
 usefulness.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 4, 13–14.
+- `project roadmap (internal)` p. 4, 13–14.
 - OpenAI — *Computer use*, https://developers.openai.com/api/docs/guides/tools-computer-use —
   5-шаговый цикл (`computer_call` / `computer_call_output`, `previous_response_id`), 9 action types,
   safety (environmental isolation, untrusted-input validation, human oversight), ограничения

@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -49,4 +49,4 @@ pending-approval и audit видны в UI.
 **Связи:** [[agent-observability-console]] (traces), [[incident-response-agent]] (failed runs).
 
 ## Sources
-- `Дорожная карта.pdf` стр. 11–12 (Sprint 4), стр. 23 (build order).
+- `project roadmap (internal)` p. 11–12 (Sprint 4), стр. 23 (build order).

@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -18,4 +18,4 @@ workflow (явные шаги, transitions, retries, approval gates), а не с
 **Следствие:** human-in-the-loop approval перед risky action (Sprint 4.1) → [[governance]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 11–12.
+- `project roadmap (internal)` p. 11–12.

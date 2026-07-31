@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -21,4 +21,4 @@ updated: 2026-06-07
 **Связи:** Design 5 + Sprint 5 — runs with full trace 100%.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 12, 20.
+- `project roadmap (internal)` p. 12, 20.

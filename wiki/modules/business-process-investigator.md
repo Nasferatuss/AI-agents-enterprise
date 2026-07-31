@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -24,4 +24,4 @@ contradictions, backlog), sample ТЗ в `examples/docs/sample_spec.md`. **DoD �
 **Связи:** [[rag]], [[compliance-risk-reviewer]] (идёт в той же паре спринтов).
 
 ## Sources
-- `Дорожная карта.pdf` стр. 12–13 (Sprint 6).
+- `project roadmap (internal)` p. 12–13 (Sprint 6).

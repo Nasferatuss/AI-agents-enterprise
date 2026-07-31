@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf", "OpenAI — Evals", "OpenAI — Graders"]
+sources: ["project roadmap (internal)", "OpenAI — Evals", "OpenAI — Graders"]
 updated: 2026-06-13
 ---
 
@@ -52,7 +52,7 @@ LLM-judges (faithfulness, answer relevance; complexity=judge → frontier-tier �
 **Риски:** стоимость API при evals, недостоверность synthetic dataset.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 9–11, 14, 21–22.
+- `project roadmap (internal)` p. 9–11, 14, 21–22.
 - OpenAI — *Evals*, https://developers.openai.com/api/docs/guides/evals — структура eval
   (`data_source_config` + `testing_criteria`, UUID), JSONL test data + ground truth, async runs,
   templated-промпты `{{ }}`, метрики (`result_counts`, `per_testing_criteria_results`, `per_model_usage`).

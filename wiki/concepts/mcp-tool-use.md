@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf", "Anthropic — Model Context Protocol", "Anthropic — Building effective agents", "OpenAI — A practical guide to building agents"]
+sources: ["project roadmap (internal)", "Anthropic — Model Context Protocol", "Anthropic — Building effective agents", "OpenAI — A practical guide to building agents"]
 updated: 2026-06-13
 ---
 
@@ -97,7 +97,7 @@ OpenAI делит оркестрацию на две категории и ре�
 80%+/90% → [[governance]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 3, 13.
+- `project roadmap (internal)` p. 3, 13.
 - Anthropic — *Model Context Protocol*, https://www.anthropic.com/news/model-context-protocol
   — определение open standard, проблема M×N-фрагментации, client/server-модель, что выпущено
   (spec+SDK, Claude Desktop local servers, open-source серверы), early adopters (Block, Apollo,

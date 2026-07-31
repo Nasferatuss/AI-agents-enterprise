@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf", "OpenAI — A practical guide to building agents"]
+sources: ["project roadmap (internal)", "OpenAI — A practical guide to building agents"]
 updated: 2026-06-13
 ---
 
@@ -60,7 +60,7 @@ human-in-the-loop approval перед risky action в [[enterprise-workflow-orch
 платформы) — отдельный слой, Design 6 / позже.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 1, 3, 9, 13, 15, 20–22.
+- `project roadmap (internal)` p. 1, 3, 9, 13, 15, 20–22.
 - OpenAI — *A practical guide to building agents*,
   https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/
   (PDF: cdn.openai.com/...), секция Guardrails — layered defense; named типы (relevance classifier,

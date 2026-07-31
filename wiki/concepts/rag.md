@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-10
 ---
 
@@ -38,4 +38,4 @@ faithfulness, answer relevance, answer groundedness → [[evals]].
 **Риск:** «чат с PDF» → акцент на eval lab, corrective RAG, citation accuracy, regression.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 2, 10, 22.
+- `project roadmap (internal)` p. 2, 10, 22.

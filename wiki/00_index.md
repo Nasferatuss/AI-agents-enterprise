@@ -1,6 +1,6 @@
 ---
 type: index
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -100,7 +100,8 @@ audit); scenario runner → bug report. Страница `/qa`. v0 = вирту�
 
 
 ## Источники
-- `sources/Дорожная карта.pdf` — полный roadmap проекта (24 стр.)
+- `project roadmap (internal)` — 24-страничный roadmap проекта. Не публикуется:
+  ссылки на него в вики сохранены как провенанс, сам документ внутренний.
 - Внешние ссылки из источника — **интегрированы в вики (2026-06-13):**
   - [OpenAI — A practical guide to building agents](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/)
     → интегрировано в [[mcp-tool-use]] (tools, single/multi-agent), [[context-engineering]]

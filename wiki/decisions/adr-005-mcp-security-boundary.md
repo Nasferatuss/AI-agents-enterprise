@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -21,4 +21,4 @@ governance должен быть встроен в gateway, а не пристр
 **Связи:** [[mcp-deep-research-agent]], Sprint 7.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 13, 19.
+- `project roadmap (internal)` p. 13, 19.

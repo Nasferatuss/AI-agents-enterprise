@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -24,4 +24,4 @@ run, API + UI `/observability` (dashboard, failure taxonomy, trace detail) → [
 **Метрика:** runs with full trace 100%.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 3, 12.
+- `project roadmap (internal)` p. 3, 12.

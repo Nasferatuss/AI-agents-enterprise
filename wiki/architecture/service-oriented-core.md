@@ -1,6 +1,6 @@
 ---
 type: architecture
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -46,4 +46,4 @@ Monorepo: `docs/` · `platform/` (слои выше) · `apps/` (10 модуле
 `infra/` (docker, github-actions, terraform_optional) · `tests/` (integration, e2e, eval_regression, security).
 
 ## Sources
-- `Дорожная карта.pdf` стр. 1–7 (концептуальная архитектура, directory map).
+- `project roadmap (internal)` p. 1–7 (концептуальная архитектура, directory map).

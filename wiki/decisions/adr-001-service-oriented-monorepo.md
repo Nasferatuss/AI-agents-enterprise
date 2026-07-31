@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -28,4 +28,4 @@ read-only SQL guard, schema reflection, sample BI database, governed live web �
 `autonomous`. App→app зависимостей не осталось.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 1–2, 23.
+- `project roadmap (internal)` p. 1–2, 23.

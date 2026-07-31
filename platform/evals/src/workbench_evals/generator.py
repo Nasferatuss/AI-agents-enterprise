@@ -3,7 +3,7 @@
 Extends the basic per-chunk generator with the case types that make an eval set
 trustworthy: standard (answerable), negative (off-corpus → must refuse),
 multi-hop (needs two sources). Ships a benchmark card — the calibration artifact
-that mitigates the "synthetic dataset недостоверен" risk by making composition,
+that mitigates the "synthetic data is not trustworthy" risk by making composition,
 coverage, and the generating model explicit.
 """
 

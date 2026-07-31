@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -31,4 +31,4 @@ fix recommendation usefulness.
 **Связи:** [[observability]], [[evals]], [[enterprise-workflow-orchestrator]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 14 (Sprint 9.1).
+- `project roadmap (internal)` p. 14 (Sprint 9.1).

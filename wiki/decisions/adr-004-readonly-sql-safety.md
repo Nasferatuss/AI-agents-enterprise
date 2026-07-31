@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -20,4 +20,4 @@ updated: 2026-06-07
 на уровне execution, а не только промпта. См. [[governance]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 19 (risk register).
+- `project roadmap (internal)` p. 19 (risk register).

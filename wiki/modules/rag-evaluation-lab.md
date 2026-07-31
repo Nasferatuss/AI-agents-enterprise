@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-10
 ---
 
@@ -37,4 +37,4 @@ precision/recall, faithfulness, answer relevance → [[evals]].
 **Связи:** [[synthetic-eval-generator]] (датасеты), [[text-to-sql-rag-agent]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 10 (Sprint 2), стр. 19–20 (риски), стр. 22 (метрики).
+- `project roadmap (internal)` p. 10 (Sprint 2), стр. 19–20 (риски), стр. 22 (метрики).

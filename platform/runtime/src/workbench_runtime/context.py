@@ -9,8 +9,8 @@ Three jobs:
    keep the recent turns verbatim. The cut never separates a tool call from
    its result.
 3. Every run records the context it actually used — parts and compaction
-   events land in AgentRun.context (the v0 of "сохраняет использованный
-   контекст"; Postgres persistence arrives with the trace layer, Sprint 5).
+   events land in AgentRun.context (the v0 of "records the context it used";
+   Postgres persistence arrives with the trace layer, Sprint 5).
 
 Token counts are a chars/4 heuristic — good enough for budgeting; provider
 tokenizers can replace it later without changing the interface.

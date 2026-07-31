@@ -1,6 +1,6 @@
 ---
 type: architecture
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -35,4 +35,4 @@ updated: 2026-06-07
 - архитектура переключает модели через **model-router**.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 3–4.
+- `project roadmap (internal)` p. 3–4.

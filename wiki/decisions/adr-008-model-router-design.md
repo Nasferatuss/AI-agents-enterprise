@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["разговор с пользователем 2026-06-10", "Дорожная карта.pdf"]
+sources: ["разговор с пользователем 2026-06-10", "project roadmap (internal)"]
 updated: 2026-06-10
 ---
 
@@ -42,4 +42,4 @@ extraction). На 24GB VRAM 4090 стоит докачать **Qwen3-14B** (ил
 
 ## Sources
 - Пользователь, 2026-06-10: доступные ключи, железо, предпочтение local-first.
-- `Дорожная карта.pdf` стр. 3–4, 8 (model-router, hybrid split).
+- `project roadmap (internal)` p. 3–4, 8 (model-router, hybrid split).

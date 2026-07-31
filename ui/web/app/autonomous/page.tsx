@@ -38,12 +38,12 @@ type AutonomousResult = {
   cost_usd: number | null;
 };
 
-const PLACEHOLDER = "Посчитай 17*23 и объясни результат";
+const PLACEHOLDER = "Compute 17*23 and explain the result";
 
 const EXAMPLES = [
-  "Посчитай 17*23 и объясни результат",
-  "Сколько секунд осталось до конца текущего часа?",
-  "Вычисли 2**10 и сравни с 1000",
+  "Compute 17*23 and explain the result",
+  "How many seconds are left until the end of the current hour?",
+  "Evaluate 2**10 and compare it to 1000",
 ];
 
 // Pull a human-readable final answer + step count out of `actions`, whether it

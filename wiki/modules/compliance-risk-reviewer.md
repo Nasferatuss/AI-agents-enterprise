@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -34,4 +34,4 @@ PII, approval, tool permissions, risk report.
 **Связи:** [[business-process-investigator]], [[governance]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 13 (Sprint 6.1), стр. 20–22.
+- `project roadmap (internal)` p. 13 (Sprint 6.1), стр. 20–22.

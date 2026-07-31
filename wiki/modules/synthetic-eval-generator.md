@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -28,4 +28,4 @@ benchmark cards.
 **Связи:** [[rag-evaluation-lab]], [[text-to-sql-rag-agent]], [[evals]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 14 (Sprint 9).
+- `project roadmap (internal)` p. 14 (Sprint 9).

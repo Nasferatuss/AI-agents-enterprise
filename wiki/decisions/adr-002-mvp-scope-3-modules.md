@@ -1,7 +1,7 @@
 ---
 type: decision
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-07
 ---
 
@@ -23,4 +23,4 @@ updated: 2026-06-07
 release plan: MVP публично за 8–10 недель.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 2, 7, 23–24.
+- `project roadmap (internal)` p. 2, 7, 23–24.

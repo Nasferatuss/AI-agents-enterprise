@@ -23,8 +23,8 @@ externally-connected flagships (autonomous agent, live browser, real-web researc
 and then shows the engineering rigor underneath (guarded SQL, approval-gated
 workflows, per-run observability). Run it locally with `make up && make ui`.
 
-<!-- Screenshots: capture the set described in docs/screenshots/README.md, then
-     uncomment the blocks below (they render once the files exist).
+<!-- Screenshots are not committed — see docs/screenshots/README.md for the shot
+     list and how to capture them. Uncomment once the files are in place.
 ![Autonomous Agent — plan/act/reflect loop](docs/screenshots/autonomous.gif)
 ![Live Computer-Use — driving a real site](docs/screenshots/browse.gif)
 ![Deep Research — cited report over the real web](docs/screenshots/research.png)

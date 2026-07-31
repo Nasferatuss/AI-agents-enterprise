@@ -1,6 +1,6 @@
 ---
 type: concept
-sources: ["Дорожная карта.pdf", "Anthropic — Building effective agents", "OpenAI — A practical guide to building agents"]
+sources: ["project roadmap (internal)", "Anthropic — Building effective agents", "OpenAI — A practical guide to building agents"]
 updated: 2026-06-13
 ---
 
@@ -71,7 +71,7 @@ OpenAI в *practical guide* сводит агента к трём компоне
 Agent Runtime · [[adr-008-model-router-design]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 2, 10.
+- `project roadmap (internal)` p. 2, 10.
 - Реализация: `platform/runtime` (Sprint 1.1, 2026-06-10).
 - Anthropic — *Building effective agents*, https://www.anthropic.com/research/building-effective-agents
   — augmented LLM (model + retrieval + tools + memory) как базовый блок, «keep it simple».

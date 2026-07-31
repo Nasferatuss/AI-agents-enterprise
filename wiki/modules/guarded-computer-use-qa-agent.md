@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -49,4 +49,4 @@ retries.
 **Связи:** [[evals]], [[agent-observability-console]].
 
 ## Sources
-- `Дорожная карта.pdf` стр. 13–14 (Sprint 8).
+- `project roadmap (internal)` p. 13–14 (Sprint 8).

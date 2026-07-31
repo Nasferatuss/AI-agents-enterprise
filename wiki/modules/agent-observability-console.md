@@ -1,7 +1,7 @@
 ---
 type: module
 status: active
-sources: ["Дорожная карта.pdf"]
+sources: ["project roadmap (internal)"]
 updated: 2026-06-13
 ---
 
@@ -35,4 +35,4 @@ dashboard (total runs, success rate, p95 latency, total cost), failure taxonomy,
 **Связи:** питает [[incident-response-agent]] (failed traces), используется всеми модулями.
 
 ## Sources
-- `Дорожная карта.pdf` стр. 12 (Sprint 5), стр. 20 (риск observability).
+- `project roadmap (internal)` p. 12 (Sprint 5), стр. 20 (риск observability).
