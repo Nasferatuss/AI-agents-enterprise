@@ -23,13 +23,18 @@ externally-connected flagships (autonomous agent, live browser, real-web researc
 and then shows the engineering rigor underneath (guarded SQL, approval-gated
 workflows, per-run observability). Run it locally with `make up && make ui`.
 
-<!-- Screenshots are not committed — see docs/screenshots/README.md for the shot
-     list and how to capture them. Uncomment once the files are in place.
+![Observability Console — cost, latency and failure taxonomy for every run](docs/screenshots/observability.png)
+
+*The Observability Console over the Compose stack, reading nine seeded runs
+(`make seed`). Every agent, workflow and eval run lands here with its status,
+step count, latency and cost; the failure taxonomy is aggregated in SQL.*
+
+<!-- The remaining shots need a live provider key, so they are not committed yet
+     — see docs/screenshots/README.md for the list and how to capture them.
 ![Autonomous Agent — plan/act/reflect loop](docs/screenshots/autonomous.gif)
 ![Live Computer-Use — driving a real site](docs/screenshots/browse.gif)
 ![Deep Research — cited report over the real web](docs/screenshots/research.png)
 ![Text-to-SQL — SQL + result + reasoning trace](docs/screenshots/text2sql.png)
-![Observability — cost/latency/failure taxonomy](docs/screenshots/observability.png)
 -->
 
 ## What's built
