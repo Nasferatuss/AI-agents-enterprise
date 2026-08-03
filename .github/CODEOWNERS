@@ -1,0 +1,10 @@
+# Every change is reviewed by the maintainer.
+*                                   @Nasferatuss
+
+# The guard rails. A change here is never reviewed as an ordinary one: these are
+# the files the security model in docs/security.md actually rests on.
+/platform/capabilities/sql_guard.py @Nasferatuss
+/platform/orchestrator/engine.py    @Nasferatuss
+/platform/observability/            @Nasferatuss
+/docs/security.md                   @Nasferatuss
+/.github/workflows/                 @Nasferatuss

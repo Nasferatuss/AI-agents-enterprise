@@ -60,7 +60,7 @@ wiki/
   exactly — page of the PDF, section of the article. This is what makes a claim
   checkable instead of merely asserted.
 - **Contradictions**: when a new source contradicts what is already in the wiki,
-  do **not** overwrite silently. Add a `> ⚠️ Противоречие:` block with both
+  do **not** overwrite silently. Add a `> ⚠️ Contradiction:` block with both
   versions and their sources. A synthesis is a visible compromise, not a
   rewritten history.
 

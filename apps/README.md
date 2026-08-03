@@ -1,9 +1,10 @@
 # apps/ — demo modules
 
-Десять demo-модулей поверх Service-Oriented Core. Появляются по спринтам:
+Ten demo modules on top of the service-oriented core, arriving sprint by sprint.
 
 MVP: `workflow-orchestrator` · `text-to-sql-rag-agent` · `rag-evaluation-lab`
-(+ сквозной `agent-observability-console`).
+(plus `agent-observability-console`, which cuts across all of them).
 
-Каждый модуль — тонкое приложение: бизнес-сценарий, промпты, UI-страница.
-Вся тяжёлая механика (RAG, evals, traces, governance, model routing) — в `platform/`.
+Each module is a thin application: a business scenario, the prompts, and a UI
+page. All of the heavy machinery — RAG, evals, traces, governance, model routing
+— lives in `platform/`.
