@@ -23,18 +23,33 @@ externally-connected flagships (autonomous agent, live browser, real-web researc
 and then shows the engineering rigor underneath (guarded SQL, approval-gated
 workflows, per-run observability). Run it locally with `make up && make ui`.
 
+![Text-to-SQL — question, generated SQL, result and reasoning trace](docs/screenshots/text2sql.png)
+
+*Text-to-SQL against the bundled retail database, answered by a local model
+through the router. The `LIMIT 200` in the executed statement was not written by
+the model — the SQL guard injects it (ADR-004), alongside the AST check, the
+function denylist, the table allowlist and a read-only connection.*
+
+![Workflow Orchestrator paused at its approval gate](docs/screenshots/workflows.png)
+
+*The orchestrator suspended at `awaiting_approval`. Control flow is deterministic
+— no model output decides which step runs — and the `grant` step cannot execute
+until a human approves or rejects, with the decision written to the audit log
+(ADR-007).*
+
 ![Observability Console — cost, latency and failure taxonomy for every run](docs/screenshots/observability.png)
 
-*The Observability Console over the Compose stack, reading nine seeded runs
-(`make seed`). Every agent, workflow and eval run lands here with its status,
-step count, latency and cost; the failure taxonomy is aggregated in SQL.*
+*Every agent, workflow and eval run is traced (ADR-006): status, step count,
+latency and cost, with the failure taxonomy aggregated in SQL. The top row is
+the live Text-to-SQL run above — `$0.00000` because it was served locally.*
 
-<!-- The remaining shots need a live provider key, so they are not committed yet
-     — see docs/screenshots/README.md for the list and how to capture them.
+<!-- Still to capture. The autonomous agent and deep research request the
+     `complex` tier, which routes to a frontier API by design (ADR-003/008), so
+     these two need a provider key; the live-browser flagship additionally needs
+     chromium in the api image. See docs/screenshots/README.md.
 ![Autonomous Agent — plan/act/reflect loop](docs/screenshots/autonomous.gif)
 ![Live Computer-Use — driving a real site](docs/screenshots/browse.gif)
 ![Deep Research — cited report over the real web](docs/screenshots/research.png)
-![Text-to-SQL — SQL + result + reasoning trace](docs/screenshots/text2sql.png)
 -->
 
 ## What's built
