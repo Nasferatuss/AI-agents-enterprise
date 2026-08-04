@@ -43,12 +43,20 @@ until a human approves or rejects, with the decision written to the audit log
 latency and cost, with the failure taxonomy aggregated in SQL. The top row is
 the live Text-to-SQL run above — `$0.00000` because it was served locally.*
 
+![Live Computer-Use — a real site driven toward a goal, observe → act → finish](docs/screenshots/browse.png)
+
+*Real headless Chromium on `docs.python.org`, driven by a local 3B model: it
+observes 30 interactable elements, clicks one, re-observes the page it landed on
+and finishes with that page's exact title. `$0.00000` — served locally. The
+action space is the safety boundary printed at the bottom, not a prompt
+instruction. A model this small navigates but does not reliably converge on
+harder goals; that ceiling is the model's, and the loop around it is the same
+one a frontier model drives.*
+
 <!-- Still to capture. The autonomous agent and deep research request the
      `complex` tier, which routes to a frontier API by design (ADR-003/008), so
-     these two need a provider key; the live-browser flagship additionally needs
-     chromium in the api image. See docs/screenshots/README.md.
+     these two need a provider key. See docs/screenshots/README.md.
 ![Autonomous Agent — plan/act/reflect loop](docs/screenshots/autonomous.gif)
-![Live Computer-Use — driving a real site](docs/screenshots/browse.gif)
 ![Deep Research — cited report over the real web](docs/screenshots/research.png)
 -->
 
