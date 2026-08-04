@@ -7,7 +7,7 @@ since they carry the "wow" in a 5-minute review:
 | File | What to capture |
 |---|---|
 | `autonomous.gif` | `/autonomous` mid-run: the plan→act→reflect loop iterating, a tool call + result, a file written to the sandbox |
-| `browse.gif` | `/browse` driving a real site (observe → act), ideally with the safety boundary refusing a destructive action |
+| `browse.png` | ✅ captured — `/browse` on `docs.python.org` with a local 3B model. A destructive-action refusal still needs a site where refusing is meaningful |
 | `research.png` | `/research` final report citing real source URLs, with the tool-call audit trail visible |
 | `text2sql.png` | `/text2sql` answer + generated SQL + result table + reasoning trace (model, latency, cost) |
 | `observability.png` | `/observability` dashboard: total runs, success rate, p95 latency, cost, failure taxonomy |

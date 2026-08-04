@@ -17,6 +17,8 @@ guarantees make that true:
    sets the key itself with ``monkeypatch.setenv`` after this fixture runs.
 """
 
+import os
+
 import pytest
 
 from workbench_observability import reset_engine
@@ -36,10 +38,21 @@ _PROVIDER_KEY_ENVS = (
 
 @pytest.fixture(autouse=True)
 def _isolate_environment(monkeypatch):
+    # Drop every WB_* value first: a real load_dotenv() anywhere (an import-time
+    # call, a helper script) copies the developer's .env into os.environ for the
+    # whole process, and no later monkeypatching of the loader takes it back out.
+    # Settings has a default for each of these, which is what the suite asserts on.
+    for env in [k for k in os.environ if k.startswith("WB_")]:
+        monkeypatch.delenv(env, raising=False)
     monkeypatch.setenv("WB_TRACE_DB_URL", "sqlite+aiosqlite:///:memory:")
     # Neuter dotenv loading first, then drop any keys already in os.environ — so a
     # later get_settings() (which calls load_dotenv) cannot bring them back.
     monkeypatch.setattr(_config, "load_dotenv", lambda *a, **k: False)
+    # Settings declares env_file=".env", and pydantic-settings reads that file
+    # itself — neutering load_dotenv above does not stop it. Detach the file too,
+    # or every WB_* value in a developer's .env (routing flags, model names, URLs)
+    # silently reshapes the suite: green in CI, red on the machine running the stack.
+    monkeypatch.setitem(_config.Settings.model_config, "env_file", None)
     for env in _PROVIDER_KEY_ENVS:
         monkeypatch.delenv(env, raising=False)
     get_settings.cache_clear()

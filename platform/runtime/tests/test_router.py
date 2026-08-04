@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -5,6 +7,7 @@ from workbench_runtime.pricing import estimate_cost_usd
 from workbench_runtime.providers import Provider, build_registry
 from workbench_runtime.router import ModelRouter, NoProviderAvailableError
 from workbench_runtime.types import ChatMessage
+from workbench_shared.config import get_settings
 
 ALL_KEY_ENVS = ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY", "MOONSHOT_API_KEY"]
 
@@ -27,6 +30,17 @@ def test_suite_is_hermetic_provider_keys_stripped():
         assert os.environ.get(env) is None, f"{env} leaked into the test environment"
     enabled = {name for name, p in build_registry().items() if p.enabled}
     assert enabled == {"local"}, f"only the keyless local provider should be enabled, got {enabled}"
+
+
+def test_suite_is_hermetic_dotenv_detached():
+    # The companion sentinel: provider keys are read from os.environ, but every
+    # WB_* setting comes from pydantic-settings, which reads .env on its own.
+    # Nothing in a developer's .env may reach the suite — WB_ROUTE_STANDARD_VIA_LOCAL
+    # alone silently rewrites the routing chain the tests below assert on.
+    from workbench_shared.config import Settings
+
+    assert Settings.model_config["env_file"] is None
+    assert get_settings().route_standard_via_local is False
 
 
 def test_chain_local_only_without_keys(clean_env):
@@ -216,6 +230,7 @@ async def test_local_provider_uses_short_connect_timeout():
 
     assert isinstance(captured[0], httpx.Timeout)  # local → granular timeout w/ short connect
     assert captured[0].connect == clients._LOCAL_CONNECT_TIMEOUT_S
+    assert captured[0].read == get_settings().local_read_timeout_s
     assert captured[1] == clients._TIMEOUT_S  # API → plain full timeout
 
 
@@ -239,6 +254,131 @@ async def test_retry_on_503_then_success(monkeypatch):
         http, provider, "m", [UserMessage(content="hi")], [], None, 16
     )
     assert out.text == "recovered"
+
+
+async def test_local_read_timeout_is_configurable(monkeypatch):
+    # A cold 30B model takes longer to answer than the API default allows; without
+    # a way to raise the read budget the router writes the box off and pays an API.
+    import workbench_runtime.clients as clients
+    from workbench_runtime.types import UserMessage
+
+    monkeypatch.setenv("WB_LOCAL_READ_TIMEOUT_S", "600")
+    get_settings.cache_clear()
+    captured: list[object] = []
+
+    async def fake_post(url, **kwargs):
+        captured.append(kwargs["timeout"])
+        return httpx.Response(200, json=_completion_payload("ok"))
+
+    http = httpx.AsyncClient()
+    http.post = fake_post  # type: ignore[method-assign]
+    await clients.step_openai_compatible(
+        http, _fake_provider("local", "local"), "m", [UserMessage(content="hi")], [], None, 16
+    )
+
+    assert captured[0].read == 600.0
+    assert captured[0].connect == clients._LOCAL_CONNECT_TIMEOUT_S  # still fails fast when offline
+
+
+async def test_local_reasoning_model_retried_without_thinking():
+    # Ollama puts a reasoning model's chain of thought in "reasoning" and leaves
+    # "content" empty. Retry without thinking instead of returning "" — which
+    # the callers report as an unexplainable parse failure.
+    import workbench_runtime.clients as clients
+    from workbench_runtime.types import UserMessage
+
+    bodies: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        bodies.append(body)
+        if "reasoning_effort" not in body:
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {"message": {"role": "assistant", "content": "", "reasoning": "…"}}
+                    ],
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 512},
+                },
+            )
+        return httpx.Response(200, json=_completion_payload('{"action":"finish"}'))
+
+    out = await clients.step_openai_compatible(
+        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        _fake_provider("local", "local"),
+        "qwen3:4b",
+        [UserMessage(content="hi")],
+        [],
+        None,
+        512,
+    )
+
+    assert out.text == '{"action":"finish"}'
+    assert "reasoning_effort" not in bodies[0]
+    assert bodies[1]["reasoning_effort"] == "none"
+
+
+async def test_local_reasoning_model_that_never_answers_is_an_error():
+    # If the retry is still all thought, fail loudly so the router falls back
+    # and the log says why, rather than passing "" down the stack.
+    import workbench_runtime.clients as clients
+    from workbench_runtime.types import UserMessage
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"role": "assistant", "content": "", "reasoning": "…"}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 512},
+            },
+        )
+
+    with pytest.raises(clients.ProviderCallError, match="chain-of-thought"):
+        await clients.step_openai_compatible(
+            httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+            _fake_provider("local", "local"),
+            "qwen3:4b",
+            [UserMessage(content="hi")],
+            [],
+            None,
+            512,
+        )
+
+
+async def test_hosted_provider_is_never_asked_to_skip_thinking():
+    # reasoning_effort="none" is an Ollama-ism; hosted APIs reject it. An empty
+    # answer from a hosted provider stays empty.
+    import workbench_runtime.clients as clients
+    from workbench_runtime.types import UserMessage
+
+    bodies: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"role": "assistant", "content": "", "reasoning": "…"}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 512},
+            },
+        )
+
+    hosted = Provider(
+        name="ds", kind="openai_compatible", base_url="http://y/v1", api_key_env="X", models={}
+    )
+    out = await clients.step_openai_compatible(
+        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        hosted,
+        "m",
+        [UserMessage(content="hi")],
+        [],
+        None,
+        512,
+    )
+
+    assert out.text == ""
+    assert len(bodies) == 1
 
 
 async def _noop_sleep(_seconds):
