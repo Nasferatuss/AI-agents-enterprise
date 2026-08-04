@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Nasferatuss/AI-agents-enterprise/security/advisories/new
+    about: >-
+      Report privately — SQL guard bypass, approval-gate escape, SSRF, secret
+      leakage. Please do not open a public issue.
+  - name: Threat model and known limitations
+    url: https://github.com/Nasferatuss/AI-agents-enterprise/blob/main/docs/security.md
+    about: Read this first — several common questions are already answered as deliberate scope.

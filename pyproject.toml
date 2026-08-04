@@ -70,3 +70,22 @@ asyncio_mode = "auto"
 markers = ["playwright: real-browser e2e via Playwright/chromium (run with -m playwright)"]
 addopts = "-m 'not playwright'"
 testpaths = ["platform/shared/tests", "platform/gateway/tests", "platform/runtime/tests", "platform/rag/tests", "platform/evals/tests", "platform/orchestrator/tests", "platform/observability/tests", "platform/jobs/tests", "apps/text2sql/tests", "apps/process_investigator/tests", "apps/compliance_reviewer/tests", "platform/toolgateway/tests", "apps/deep_research/tests", "apps/computer_use_qa/tests", "apps/incident_response/tests", "apps/autonomous_agent/tests", "tests"]
+
+# Coverage over the workspace members' own sources. pytest-cov is pulled in
+# ad-hoc by the CI job (`uv run --with pytest-cov`) rather than added to the dev
+# group, so measuring coverage does not churn uv.lock.
+[tool.coverage.run]
+branch = true
+source = ["platform", "apps"]
+omit = ["*/tests/*", "*/conftest.py", "*/__main__.py"]
+
+[tool.coverage.report]
+# A number that counts unreachable lines is not a measurement of anything.
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
+skip_covered = true

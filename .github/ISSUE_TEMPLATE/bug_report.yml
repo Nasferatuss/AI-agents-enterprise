@@ -1,0 +1,67 @@
+name: Bug report
+description: Something behaves differently from what the docs describe
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Not for security issues — a guard bypass, an approval-gate escape or a
+        secret leak goes through
+        [private reporting](https://github.com/Nasferatuss/AI-agents-enterprise/security/advisories/new).
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: >
+        Commands, the request or question you sent, the response you got. If an
+        agent run is involved, the run id or the trace is the most useful thing
+        you can attach.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part
+      options:
+        - platform/ — router, runtime, context, RAG, evals, orchestrator, observability
+        - apps/ — a demo module
+        - flagship — autonomous / browse / research
+        - ui/web — the demo console
+        - infra — Compose, migrations, trace store
+        - docs
+        - not sure
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      placeholder: output of `git rev-parse --short HEAD`
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: How it was running
+      description: >
+        Local or Compose, Python version, which providers were configured, and
+        whether any live-network opt-in was on (WB_RESEARCH_LIVE_WEB, bench-live).
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or traceback
+      description: Redact API keys and DSNs before pasting.
+      render: shell

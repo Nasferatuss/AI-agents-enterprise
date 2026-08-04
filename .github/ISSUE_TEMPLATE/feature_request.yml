@@ -1,0 +1,55 @@
+name: Proposal
+description: Suggest a capability, or agree on a design before writing it
+labels: [proposal]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Anything beyond a small self-contained change is worth agreeing on here
+        first. It is cheaper than discovering at review time that the design does
+        not fit the platform.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you cannot do today, and what you are doing instead. The situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Where it belongs
+      description: >
+        New capability usually goes in `platform/` with a thin module in `apps/`
+        demonstrating it — not the other way round.
+      options:
+        - platform/ — a core capability
+        - apps/ — a demo module over existing core capability
+        - both — core capability plus a module showing it
+        - infra / tooling / docs
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: fits
+    attributes:
+      label: Fits the platform
+      options:
+        - label: It can be tested without touching the network
+        - label: A run it performs would emit a trace like everything else
+        - label: I know whether this is production-grade engineering or a demo seam, and will say which in the README
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including doing nothing, and why that is not enough.

@@ -31,3 +31,9 @@ data/*
 
 # macOS
 .DS_Store
+
+# Coverage artifacts (the CI job uploads its HTML report as a build artifact)
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/

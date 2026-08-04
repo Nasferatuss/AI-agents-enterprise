@@ -1,205 +1,217 @@
-# Настройка окружения (ADR-009: сервис на Mac, GPU-машина = inference)
+# Environment setup (ADR-009: the service on one host, a GPU box for inference)
 
-Пошаговая инструкция: что, где и как прописать. Делается один раз.
+A one-time, step-by-step walkthrough of what to configure and where. The
+topology assumes two machines — the one running the platform, and a separate box
+with the GPU serving local models. If you only have one machine, everything still
+works: point `WB_LOCAL_LLM_BASE_URL` at `localhost` and skip Parts 1 and 2.
+
+Throughout, `gpu-box` stands for the hostname of your GPU machine.
 
 ---
 
-## Часть 1. GPU-машина (RTX 4090) — поднять Ollama для сети
+## Part 1. The GPU machine — expose Ollama to the network
 
-### 1.1. Проверить, что Ollama установлена
+### 1.1. Check that Ollama is installed
 
-Открой терминал (на Windows — PowerShell) и выполни:
+Open a terminal (PowerShell on Windows) and run:
 
 ```
 ollama --version
 ```
 
-Если команды нет — поставить с https://ollama.com/download.
+If the command is missing, install it from https://ollama.com/download.
 
-### 1.2. Заставить Ollama слушать сеть, а не только localhost
+### 1.2. Make Ollama listen on the network rather than only on localhost
 
-По умолчанию Ollama принимает запросы только с самой машины. Нужна переменная
-окружения `OLLAMA_HOST=0.0.0.0`.
+By default Ollama accepts requests only from the machine it runs on. It needs
+`OLLAMA_HOST=0.0.0.0`.
 
 **Windows:**
-1. `Win + R` → `sysdm.cpl` → вкладка «Дополнительно» → «Переменные среды».
-2. В «Переменные среды пользователя» → «Создать»:
-   - Имя: `OLLAMA_HOST`
-   - Значение: `0.0.0.0`
-3. Полностью выйти из Ollama (иконка в трее → Quit) и запустить заново.
+1. `Win + R` → `sysdm.cpl` → the *Advanced* tab → *Environment Variables*.
+2. Under *User variables* → *New*:
+   - Name: `OLLAMA_HOST`
+   - Value: `0.0.0.0`
+3. Quit Ollama completely (tray icon → Quit) and start it again.
 
 **Linux (systemd):**
 ```bash
 sudo systemctl edit ollama
-# в открывшемся файле добавить:
+# add to the file that opens:
 # [Service]
 # Environment="OLLAMA_HOST=0.0.0.0"
 sudo systemctl restart ollama
 ```
 
-### 1.3. Открыть порт 11434 в файрволе — только для локальной сети
+### 1.3. Open port 11434 in the firewall — for the local network only
 
-**Windows (PowerShell от администратора):**
+**Windows (PowerShell as administrator):**
 ```powershell
 New-NetFirewallRule -DisplayName "Ollama LAN" -Direction Inbound -Protocol TCP `
   -LocalPort 11434 -RemoteAddress LocalSubnet -Action Allow
 ```
-`-RemoteAddress LocalSubnet` — ключевое: порт открыт только для домашней сети,
-не для интернета (у Ollama нет авторизации).
+
+`-RemoteAddress LocalSubnet` is the important part: the port is reachable from
+the local network only, never from the internet. Ollama has no authentication of
+its own.
 
 **Linux (ufw):** `sudo ufw allow from 192.168.0.0/16 to any port 11434`
 
-### 1.4. Скачать модели
+### 1.4. Pull the models
 
 ```
-ollama pull nomic-embed-text        # embeddings для RAG (~270MB)
-ollama pull qwen2.5:3b-instruct     # simple-tier LLM
-# позже, для бесплатного standard-tier (рекомендую):
+ollama pull nomic-embed-text        # embeddings for RAG (~270 MB)
+ollama pull qwen2.5:3b-instruct     # the simple tier
+# later, for a free standard tier (recommended):
 ollama pull qwen3:14b
 ```
 
-> Если Qwen-модели у тебя скачаны не через Ollama (сырые веса HuggingFace /
-> LM Studio) — для Ollama их нужно скачать её командой `pull`, она хранит модели
-> в своём формате. Либо вместо Ollama поднять LM Studio Server / vLLM — они тоже
-> дают OpenAI-compatible API, тогда в Части 3 просто укажи их адрес и порт.
+> If you already have Qwen weights that did not come from Ollama (raw HuggingFace
+> files, LM Studio), Ollama still needs its own `pull` — it keeps models in its
+> own format. Alternatively run LM Studio Server or vLLM instead; both expose an
+> OpenAI-compatible API, and Part 3 just points at their address and port.
 
-### 1.5. Узнать имя машины
+### 1.5. Find the machine's name
 
 ```
 hostname
 ```
-Допустим, вывело `DESKTOP-PC`. Тогда адрес для Mac: `http://desktop-pc.local:11434`.
+
+If that prints `gpu-box`, the address from the other machine is
+`http://gpu-box.local:11434`.
 
 ---
 
-## Часть 2 (рекомендуется). Tailscale — стабильное имя без статического IP
+## Part 2 (recommended). Tailscale — a stable name without a static IP
 
-`*.local` работает только в одной LAN и не резолвится внутри Docker-контейнеров.
-Tailscale снимает обе проблемы: бесплатно, 10 минут.
+`*.local` only works inside one LAN, and it does not resolve inside Docker
+containers. Tailscale solves both. It is free and takes about ten minutes.
 
-1. https://tailscale.com/download → поставить **на обе машины** (Mac и GPU).
-2. Залогиниться **одним и тем же** аккаунтом (Google/GitHub).
-3. В админке https://login.tailscale.com/admin/dns включить **MagicDNS**
-   (обычно включён по умолчанию).
-4. Теперь GPU-машина доступна по стабильному имени вида
-   `desktop-pc.tail1234.ts.net` (видно в админке или `tailscale status`),
-   с любой сети и из Docker-контейнеров.
+1. https://tailscale.com/download → install it **on both machines**.
+2. Log in with the **same** account on both (Google or GitHub).
+3. In the admin panel at https://login.tailscale.com/admin/dns, enable
+   **MagicDNS** (usually on by default).
+4. The GPU machine is now reachable at a stable name like
+   `gpu-box.tail1234.ts.net` — visible in the admin panel or via
+   `tailscale status` — from any network and from inside Docker containers.
 
-Проверка с Mac:
+Check it from the other machine:
+
 ```bash
-curl http://desktop-pc.tail1234.ts.net:11434/api/version
+curl http://gpu-box.tail1234.ts.net:11434/api/version
 ```
 
-> Файрвол из шага 1.3 для Tailscale-трафика: Windows обычно пропускает трафик
-> tailscale-интерфейса автоматически; если нет — добавь правило для подсети
-> `100.64.0.0/10`.
+> About the firewall rule from 1.3: Windows normally lets traffic on the
+> Tailscale interface through automatically. If it does not, add a rule for the
+> `100.64.0.0/10` subnet.
 
 ---
 
-## Часть 3. Mac — конфигурация проекта
+## Part 3. The platform host — project configuration
 
-### 3.1. Создать .env
+### 3.1. Create .env
 
 ```bash
-cd ~/projects/AI_agents_enterprise
+cd /path/to/AI-agents-enterprise
 cp .env.example .env
 ```
 
-### 3.2. Прописать в .env
+### 3.2. Fill it in
 
 ```dotenv
-# адрес GPU-машины — ОДИН из вариантов:
-WB_LOCAL_LLM_BASE_URL=http://desktop-pc.local:11434              # вариант A: mDNS (только LAN, не работает из docker compose)
-# WB_LOCAL_LLM_BASE_URL=http://desktop-pc.tail1234.ts.net:11434  # вариант B: Tailscale (рекомендую)
+# the GPU machine's address — pick ONE:
+WB_LOCAL_LLM_BASE_URL=http://gpu-box.local:11434              # option A: mDNS (LAN only, does not work from docker compose)
+# WB_LOCAL_LLM_BASE_URL=http://gpu-box.tail1234.ts.net:11434  # option B: Tailscale (recommended)
 
 WB_LOCAL_LLM_MODEL=qwen2.5:3b-instruct
 
-# ключи провайдеров (любое подмножество; провайдер включается, когда ключ задан)
+# provider keys — any subset; a provider is enabled once its key is set
 ANTHROPIC_API_KEY=sk-ant-...     # console.anthropic.com → API Keys
 OPENAI_API_KEY=sk-...            # platform.openai.com → API Keys
 DEEPSEEK_API_KEY=sk-...          # platform.deepseek.com
 MOONSHOT_API_KEY=sk-...          # platform.moonshot.ai (Kimi)
 ```
 
-После докачки `qwen3:14b` на 4090 — добавить:
+Once `qwen3:14b` has finished downloading on the GPU box, add:
+
 ```dotenv
 WB_LOCAL_LLM_MODEL=qwen3:14b
-WB_ROUTE_STANDARD_VIA_LOCAL=true   # standard-tier тоже пойдёт на 4090 (бесплатно)
+WB_ROUTE_STANDARD_VIA_LOCAL=true   # send the standard tier to the GPU box too — free
 ```
 
-> `.env` в .gitignore — ключи в репозиторий не попадут.
+> `.env` is in `.gitignore`, so keys never reach the repository.
 
-### 3.3. Запустить и проверить
+### 3.3. Run it and check
 
 ```bash
-# терминал 1: инфраструктура (нужен запущенный Docker Desktop)
-make up        # postgres + qdrant + redis + api в контейнерах
-# ИЛИ без Docker — только API-процесс:
+# terminal 1: infrastructure (needs Docker Desktop running)
+make up        # postgres + qdrant + redis + api, in containers
+# OR without Docker — just the API process:
 make api
 
-# терминал 2: проверки
+# terminal 2: checks
 curl -s localhost:8000/healthz/deps | python3 -m json.tool   # postgres/redis/qdrant: ok?
-curl -s localhost:8000/v1/models | python3 -m json.tool      # какие провайдеры enabled
+curl -s localhost:8000/v1/models | python3 -m json.tool      # which providers are enabled
 
-# живой вызов LLM (пойдёт на 4090):
+# a live LLM call — this one goes to the GPU box:
 curl -s -X POST localhost:8000/v1/chat -H 'Content-Type: application/json' \
-  -d '{"messages":[{"role":"user","content":"Скажи привет одним словом"}],"complexity":"simple"}'
+  -d '{"messages":[{"role":"user","content":"Say hello in one word"}],"complexity":"simple"}'
 
-# агент с tool-вызовом:
+# an agent making a tool call:
 curl -s -X POST localhost:8000/v1/agents/demo/run -H 'Content-Type: application/json' \
-  -d '{"input":"сколько будет 23.5 * 17 - 4?"}' | python3 -m json.tool
+  -d '{"input":"what is 23.5 * 17 - 4?"}' | python3 -m json.tool
 ```
 
 ---
 
-## Часть 4 (опционально). Реальный MCP-сервер и Playwright e2e
+## Part 4 (optional). A real MCP server, and the Playwright e2e
 
-Обе фичи выключены по умолчанию — демо работает без них. Включаются по желанию.
+Both are off by default — the demo runs without them.
 
-### 4.1. Реальный MCP-сервер для Deep Research
+### 4.1. A real MCP server for Deep Research
 
-По умолчанию Deep Research использует in-process corpus-коннекторы. Чтобы взять
-инструменты с **настоящего MCP-сервера** по stdio (тот же allowlist + audit), задай
-в `.env` команду его запуска:
+By default Deep Research uses in-process corpus connectors. To take its tools
+from an **actual MCP server** over stdio — behind the same allowlist and audit
+log — set the command that starts it in `.env`:
 
 ```dotenv
-# вариант A: bundled-сервер проекта (переотдаёт тот же corpus по реальному MCP)
+# option A: the project's bundled server (re-serves the same corpus over real MCP)
 WB_MCP_SERVER_COMMAND=python -m workbench_toolgateway.mcp_server
-# вариант B: сторонний MCP-сервer, напр. fetch (нужен установленный uvx)
+# option B: a third-party MCP server, e.g. fetch (needs uvx installed)
 # WB_MCP_SERVER_COMMAND=uvx mcp-server-fetch
 ```
 
-Проверка — какие инструменты отдаёт живой сервер:
+To see what the live server exposes:
+
 ```bash
 curl -s localhost:8000/v1/apps/research/mcp/tools | python3 -m json.tool
 ```
 
-> Сторонний сервер (вариант B) отдаёт собственные инструменты; текст источников в
-> отчёте при этом может быть пустым (report берёт тела из локального corpus) —
-> названия/URL источников и tool-trace заполняются корректно.
+> A third-party server (option B) exposes its own tools, so the source text in
+> the report may come back empty — the report pulls bodies from the local corpus.
+> Source names, URLs and the tool trace are still filled in correctly.
 
-### 4.2. Playwright — реальный браузер в Computer-Use QA
+### 4.2. Playwright — a real browser in Computer-Use QA
 
-QA-модуль по умолчанию гоняет быстрый виртуальный UI. Чтобы прогнать те же сценарии
-в **настоящем headless chromium**:
+The QA module runs against a fast virtual UI by default. To run the same
+scenarios in **real headless Chromium**:
 
 ```bash
-uv run playwright install chromium   # один раз — скачивает браузер (~150MB)
+uv run playwright install chromium   # once — downloads the browser (~150 MB)
 make e2e                             # = uv run pytest -m playwright
 ```
 
-`make test` browser-тесты не трогает (они deselect'ятся по умолчанию), так что
-chromium для обычного прогона не нужен.
+`make test` does not touch the browser tests — they are deselected by default —
+so an ordinary run needs no Chromium.
 
 ---
 
 ## Troubleshooting
 
-| Симптом | Причина / решение |
+| Symptom | Cause / fix |
 |---|---|
-| `/v1/chat` с `complexity=simple` отвечает не с `"provider":"local"` | 4090 недоступна — роутер ушёл в fallback. Проверь `curl http://<адрес-4090>:11434/api/version` с Mac |
-| `curl: Could not resolve host: desktop-pc.local` | mDNS не резолвится: проверь, что обе машины в одной сети/VLAN; либо переходи на Tailscale (Часть 2) |
-| Работает `make api`, но не работает из `make up` | `.local` не резолвится внутри Linux-контейнеров. Используй Tailscale-имя в `WB_LOCAL_LLM_BASE_URL` |
-| `ollama: connection refused` с Mac, но локально на GPU-машине работает | `OLLAMA_HOST=0.0.0.0` не применился (перезапусти Ollama целиком) или файрвол режет 11434 |
-| Провайдер в `/v1/models` показан `disabled` | Ключ не подхватился: ключи читаются из окружения процесса; при `make api` поставь их в `.env` (pydantic-settings читает `.env` из корня) |
-| Embeddings: 503 `ollama unreachable` при ingest | То же, что п.1 — недоступна 4090. Для работы без GPU: `WB_EMBEDDINGS_BACKEND=hash` (несемантический режим, только для отладки) |
+| `/v1/chat` with `complexity=simple` does not answer with `"provider":"local"` | The GPU box is unreachable and the router fell back. Check `curl http://<gpu-box-address>:11434/api/version` from the platform host |
+| `curl: Could not resolve host: gpu-box.local` | mDNS is not resolving: make sure both machines are on the same network/VLAN, or switch to Tailscale (Part 2) |
+| Works under `make api` but not under `make up` | `.local` does not resolve inside Linux containers. Use the Tailscale name in `WB_LOCAL_LLM_BASE_URL` |
+| `ollama: connection refused` from the platform host, though it works locally on the GPU box | `OLLAMA_HOST=0.0.0.0` did not take effect (restart Ollama completely), or the firewall is blocking 11434 |
+| A provider shows as `disabled` in `/v1/models` | The key was not picked up. Keys are read from the process environment; under `make api`, put them in `.env` (pydantic-settings reads `.env` from the repository root) |
+| Embeddings return 503 `ollama unreachable` during ingest | Same as the first row — the GPU box is unreachable. To work without a GPU: `WB_EMBEDDINGS_BACKEND=hash`, a non-semantic mode intended only for debugging |

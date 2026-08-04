@@ -24,6 +24,41 @@ jobs:
       - name: Tests (incl. eval regression + SQL injection suite)
         run: uv run pytest -q
 
+  coverage:
+    name: test coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Sync workspace
+        run: uv sync --frozen
+      # pytest-cov is pulled in ad-hoc rather than added to the dev group, so
+      # measuring coverage does not churn uv.lock. Settings live under
+      # [tool.coverage.*] in pyproject.toml.
+      - name: Tests with coverage
+        run: uv run --with pytest-cov pytest -q --cov --cov-report=term --cov-report=xml --cov-report=html
+      - name: Write the summary
+        if: always()
+        run: |
+          {
+            echo '### Coverage'
+            echo
+            echo '```'
+            uv run --with coverage coverage report --format=markdown 2>/dev/null | head -60 \
+              || uv run --with coverage coverage report | tail -30
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          if-no-files-found: warn
+
   secrets-scan:
     name: secret scan (trufflehog)
     runs-on: ubuntu-latest
