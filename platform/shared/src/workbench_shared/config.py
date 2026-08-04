@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     mimo_model: str = ""
     # Prepend local to the standard-tier chain (turn on after pulling a 14B+ model on the 4090)
     route_standard_via_local: bool = False
+    # How long to wait for a local generation. The default matches the API providers,
+    # which is not enough for a large or cold model: Ollama loads the weights on the
+    # first request, and a reasoning model then thinks before it answers. Raise it
+    # rather than letting the router write the box off as dead and fall to a paid API.
+    local_read_timeout_s: float = 120.0
 
     # RAG Core (Sprint 2): embeddings run locally per ADR-003 (Ollama on the GPU box).
     # "hash" is a deterministic non-semantic fallback for keyless/GPU-less dev.

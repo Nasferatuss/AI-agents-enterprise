@@ -25,6 +25,7 @@ from workbench_runtime.types import (
     Usage,
     UserMessage,
 )
+from workbench_shared.config import get_settings
 
 _TIMEOUT_S = 120.0
 
@@ -39,6 +40,14 @@ _BACKOFF_BASE_S = 0.5
 
 # Models with adaptive thinking support; enabled for complex/judge calls
 _ADAPTIVE_THINKING_PREFIXES = ("claude-opus-4", "claude-sonnet-4-6", "claude-fable")
+
+# Ollama serves a reasoning model's chain of thought in a non-standard "reasoning"
+# field and leaves "content" empty. Under a small max_tokens the whole budget can
+# go to thinking: the caller then gets an empty string, not an error, and reports
+# an unexplainable parse failure. This asks the server to answer without thinking.
+# Local providers only — hosted APIs reject the value.
+_NO_THINKING = {"reasoning_effort": "none"}
+_REASONING_FIELDS = ("reasoning", "reasoning_content")
 
 
 class ProviderCallError(Exception):
@@ -125,44 +134,69 @@ async def step_openai_compatible(
         headers["Authorization"] = f"Bearer {provider.api_key}"
 
     # Local box: short connect timeout so an offline 4090 fails fast → fallback,
-    # while still allowing a long read for slow local inference. API providers
-    # keep the full single-value timeout.
+    # while the read budget is settable (WB_LOCAL_READ_TIMEOUT_S) because a cold or
+    # large local model needs longer than a hosted API does. API providers keep the
+    # full single-value timeout.
     timeout: httpx.Timeout | float
     if provider.api_key_env == "":
-        timeout = httpx.Timeout(
-            connect=_LOCAL_CONNECT_TIMEOUT_S, read=_TIMEOUT_S, write=_TIMEOUT_S, pool=_TIMEOUT_S
-        )
+        read = get_settings().local_read_timeout_s
+        timeout = httpx.Timeout(connect=_LOCAL_CONNECT_TIMEOUT_S, read=read, write=read, pool=read)
     else:
         timeout = _TIMEOUT_S
 
-    resp: httpx.Response | None = None
-    for attempt in range(_MAX_RETRIES + 1):
-        try:
-            resp = await http.post(
-                f"{provider.base_url}/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=timeout,
+    async def post(body: dict) -> httpx.Response:
+        resp: httpx.Response | None = None
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                resp = await http.post(
+                    f"{provider.base_url}/chat/completions",
+                    json=body,
+                    headers=headers,
+                    timeout=timeout,
+                )
+            except httpx.HTTPError as exc:
+                raise ProviderCallError(provider.name, model, f"transport: {exc}") from exc
+            # Transient overload (429/503): back off and retry this provider before
+            # giving up on it and falling to the next. (Anthropic SDK retries itself.)
+            if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
+                await asyncio.sleep(_BACKOFF_BASE_S * (2**attempt))
+                continue
+            break
+
+        if resp is None:  # unreachable in practice, but `assert` is stripped under `python -O`
+            raise ProviderCallError(provider.name, model, "no response produced")
+        if resp.status_code != 200:
+            raise ProviderCallError(
+                provider.name, model, f"HTTP {resp.status_code}: {resp.text[:200]}"
             )
-        except httpx.HTTPError as exc:
-            raise ProviderCallError(provider.name, model, f"transport: {exc}") from exc
-        # Transient overload (429/503): back off and retry this provider before
-        # giving up on it and falling to the next. (Anthropic SDK retries itself.)
-        if resp.status_code in _RETRYABLE_STATUSES and attempt < _MAX_RETRIES:
-            await asyncio.sleep(_BACKOFF_BASE_S * (2**attempt))
-            continue
-        break
+        return resp
 
-    if resp is None:  # unreachable in practice, but `assert` is stripped under `python -O`
-        raise ProviderCallError(provider.name, model, "no response produced")
-    if resp.status_code != 200:
-        raise ProviderCallError(provider.name, model, f"HTTP {resp.status_code}: {resp.text[:200]}")
+    def unwrap(resp: httpx.Response) -> tuple[dict, dict]:
+        data = resp.json()
+        try:
+            return data, data["choices"][0]["message"]
+        except (KeyError, IndexError) as exc:
+            raise ProviderCallError(provider.name, model, f"malformed response: {exc}") from exc
 
-    data = resp.json()
-    try:
-        message = data["choices"][0]["message"]
-    except (KeyError, IndexError) as exc:
-        raise ProviderCallError(provider.name, model, f"malformed response: {exc}") from exc
+    resp = await post(payload)
+    data, message = unwrap(resp)
+
+    # A reasoning model that spent the whole budget thinking (see _NO_THINKING):
+    # retry once without thinking rather than hand the caller an empty string.
+    thought_only = (
+        not (message.get("content") or "").strip()
+        and not message.get("tool_calls")
+        and any(message.get(field) for field in _REASONING_FIELDS)
+    )
+    if thought_only and provider.api_key_env == "":
+        data, message = unwrap(await post({**payload, **_NO_THINKING}))
+        if not (message.get("content") or "").strip() and not message.get("tool_calls"):
+            raise ProviderCallError(
+                provider.name,
+                model,
+                f"only chain-of-thought returned; raise max_tokens (now {max_tokens}) "
+                "or serve a non-reasoning model",
+            )
 
     tool_calls = []
     for raw in message.get("tool_calls") or []:

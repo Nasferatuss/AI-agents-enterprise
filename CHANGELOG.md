@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — Local-model interop
+
+Three defects found while driving the live flagships against Ollama on the GPU
+box — the platform's own local-first default, and the path a reviewer without an
+API key takes first.
+
+- **A reasoning model returned nothing and nobody noticed.** Ollama puts a
+  model's chain of thought in a non-standard `reasoning` field and leaves
+  `content` empty; under a small `max_tokens` the whole budget goes to thinking.
+  Callers received `""` — not an error — and reported an unexplainable parse
+  failure (`/browse` stopped on step 1 with `could not parse a JSON action`).
+  The OpenAI-compatible client now retries once asking the server to skip
+  thinking, and raises a diagnostic error if the answer is still all thought.
+  Local providers only: hosted APIs reject the parameter.
+- **The local read timeout was hard-coded to the API default.** A cold or large
+  local model (a 30B MoE loads ~18GB on first call) exceeded 120s, the router
+  marked the box unhealthy and fell through to a paid provider — the opposite of
+  local-first. Now `WB_LOCAL_READ_TIMEOUT_S`, still defaulting to 120s, and the
+  short connect timeout that makes an offline box fail fast is unchanged.
+- **The test suite read the developer's `.env`.** `conftest.py` neutralised
+  `load_dotenv`, but `Settings` declares `env_file=".env"` and pydantic-settings
+  reads it directly, so every `WB_*` value leaked in. With
+  `WB_ROUTE_STANDARD_VIA_LOCAL=true` set — i.e. on any machine actually running
+  the stack — two routing tests asserted the wrong chain and failed. The file is
+  detached and all `WB_*` values stripped for the suite, with a sentinel test.
+
 ## Unreleased — Production hardening
 
 Moving the demo-grade seams to real backends, plus the deploy-gating controls.
